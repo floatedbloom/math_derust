@@ -16,6 +16,7 @@ class Home extends StatefulWidget {
 
 class HomeState extends State<Home> {
   int _selectedIndex = 2;
+  final PageController _pageController = PageController(initialPage: 2);
 
   static const List<Widget> _pages = [
     Quests(),
@@ -26,6 +27,17 @@ class HomeState extends State<Home> {
   ];
 
   void _onElementTap(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 10),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _onPageChanged(int index) {
     setState(() {
       _selectedIndex = index;
     });
@@ -51,7 +63,11 @@ class HomeState extends State<Home> {
         scrolledUnderElevation: 0.0,
         backgroundColor: Color(0xFF121212),
       ),
-      body: _pages[_selectedIndex],
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: _onPageChanged,
+        children: _pages
+      ),
       bottomNavigationBar: Theme(
           data: ThemeData(
             splashColor: Colors.transparent,

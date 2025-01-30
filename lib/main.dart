@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'pages/home.dart';
 import 'pages/login.dart';
 import 'session.dart';
+//import 'data/db.dart';
 
 void main() {
+  //WidgetsFlutterBinding.ensureInitialized();
+  //await DbHelper.instance.deleteDatabaseFile();
   runApp(const MainApp());
 }
 
@@ -16,12 +19,12 @@ class MainApp extends StatelessWidget {
     return MaterialApp(
       theme: ThemeData.dark(),
       home: FutureBuilder<bool>(
-        future: Session.isLoggedIn(), 
+        future: Session.instance.isLoggedIn, 
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
           }
-          if (/*snapshot.data == */true) return Home();
+          if (snapshot.data == true) return Home();
           return Login();
         },
       ),

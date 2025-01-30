@@ -1,23 +1,36 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:math_derust/data/db.dart';
 
 class Session {
-  static const _storage = FlutterSecureStorage();
-  static const _tokenKey = 'auth_token';
-
-  static Future<void> saveToken(String token) async {
-    await _storage.write(key: _tokenKey, value: token);
+  //stuff for instances
+  static Session? _instance;
+  static Session get instance {
+    _instance ??= Session._internal();
+    return _instance!;
   }
 
-  static Future<String?> getToken() async {
-    return await _storage.read(key: _tokenKey);
+  Session._internal();
+
+  //session variables
+  String? currentUsername;
+  int? currentUserId;
+
+  Future<void> setUser(String username) async {
+    //get user from database and set it as session
+    final DbHelper db = DbHelper.instance;
+    List<Map<String, dynamic>> users = await db.queryWhere('users','username = ?',[username]);
+    if (users.isNotEmpty) {
+      Map<String, dynamic> user = users.first;
+      currentUsername = username;
+      currentUserId = user['id'];
+    }
   }
 
-  static Future<void> clearToken() async {
-    await _storage.delete(key: _tokenKey);
+  //clear session
+  void clearUser() {
+    currentUsername = null;
+    currentUserId = null;
   }
-
-  static Future<bool> isLoggedIn() async {
-    String? token = await getToken();
-    return token != null && token.isNotEmpty;
-  }
+  
+  //logged in check
+  Future<bool> get isLoggedIn => Future.value(currentUsername != null);
 }

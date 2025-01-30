@@ -20,13 +20,18 @@ class ProfileState extends State<Profile> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             const SizedBox(height: 20),
-            const Text(
-              'USERNAME',
-              style: TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.w500,
-                color: Color.fromARGB(255, 120, 120, 120),
-              ),
+            Row(
+              children: [
+                const Text(
+                  'USERNAME',
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w500,
+                    color: Color.fromARGB(255, 120, 120, 120),
+                  ),
+                ),
+                //settings menu
+              ],
             ),
             const Text(
               'MATH CLASS',
