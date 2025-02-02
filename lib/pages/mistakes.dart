@@ -33,7 +33,7 @@ class MistakesState extends State<Mistakes> {
         child: Column(
           children: [
             SizedBox(height: 15),
-            Text("Y O U R   M I S T A K E S", style: TextStyle(
+            Text("M I S T A K E S", style: TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.bold,
                 color: Colors.blueAccent,

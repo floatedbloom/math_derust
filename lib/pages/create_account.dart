@@ -12,6 +12,7 @@ class CreateAccount extends StatefulWidget {
 class _CreateAccountState extends State<CreateAccount> {
   //fields values
   final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _classController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
@@ -19,6 +20,7 @@ class _CreateAccountState extends State<CreateAccount> {
 
   Future<void> _createAccount() async {
     String username = _usernameController.text;
+    String clas = _classController.text;
     String email = _emailController.text;
     String password = _passwordController.text;
     String confirm = _confirmController.text;
@@ -38,6 +40,7 @@ class _CreateAccountState extends State<CreateAccount> {
         'email': email,
         'password': password,
         'friends': "",
+        'class': clas,
       };      
       //put into db
       await DbHelper.instance.insert('users', userMap);
@@ -65,6 +68,10 @@ class _CreateAccountState extends State<CreateAccount> {
               TextField(
                 controller: _usernameController,
                 decoration: const InputDecoration(labelText: 'U S E R N A M E'),
+              ),
+              TextField(
+                controller: _classController,
+                decoration: const InputDecoration(labelText: 'C U R R E N T   M A T H   C L A S S'),
               ),
               TextField(
                 controller: _emailController,

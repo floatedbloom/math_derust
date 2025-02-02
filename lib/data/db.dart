@@ -39,7 +39,9 @@ class DbHelper {
         email TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
         xp INTEGER DEFAULT 0,
-        friends TEXT
+        friends TEXT,
+        class TEXT
+        streak INTEGER DEFAULT 0,
       )
     ''');
 

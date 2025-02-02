@@ -1,7 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:math_derust/data/db.dart';
 import 'dart:math';
+
+import 'package:math_derust/session.dart';
 
 class Profile extends StatefulWidget {
   const Profile({ super.key });
@@ -11,6 +14,34 @@ class Profile extends StatefulWidget {
 }
 
 class ProfileState extends State<Profile> {
+  DbHelper db = DbHelper.instance;
+
+  Future<String?> getClassValue() async {
+    List<Map<String, dynamic>> result = await db.queryWhere(
+      'users',
+      'username = ?',
+      [Session.instance.currentUsername],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first['class'];
+    }
+    return null;
+  }
+
+  Future<int?> getStreak() async {
+    List<Map<String, dynamic>> result = await db.queryWhere(
+      'users',
+      'username = ?',
+      [Session.instance.currentUsername],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first['streak'];
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,27 +50,56 @@ class ProfileState extends State<Profile> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                const Text(
-                  'USERNAME',
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.w500,
-                    color: Color.fromARGB(255, 120, 120, 120),
-                  ),
-                ),
-                //settings menu
-              ],
+            const SizedBox(height: 10),
+            Text("P R O F I L E", style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueAccent,
+                shadows: [
+                  Shadow(
+                    offset: Offset(2.0, 2.0),
+                    blurRadius: 4.0,
+                    color: Color.fromRGBO(0, 0, 0, 0.3),
+                  )
+                ]
+              ),
             ),
-            const Text(
-              'MATH CLASS',
+            Text(
+              Session.instance.currentUsername as String,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 40,
                 fontWeight: FontWeight.w500,
                 color: Color.fromARGB(255, 120, 120, 120),
               ),
+            ),
+            const SizedBox(height: 10),
+            FutureBuilder<String?>(
+              future: getClassValue(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Text('Error loading class'));
+                } else if (!snapshot.hasData || snapshot.data == null) {
+                  return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Center(child: Text('CLASS NOT SET',style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: Color.fromARGB(255, 120, 120, 120),
+                      ),)));
+                } else {
+                  return ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),
+                    child: Text(
+                      snapshot.data!,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: Color.fromARGB(255, 120, 120, 120),
+                      ),
+                    ),
+                  );
+                }
+              },
             ),
             const SizedBox(height: 30),
             ConstrainedBox(
@@ -67,20 +127,44 @@ class ProfileState extends State<Profile> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            "100",
-                            style: TextStyle(
-                              fontSize: 35,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blueAccent,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(2.0, 2.0),
-                                  blurRadius: 4.0,
-                                  color: Color.fromRGBO(0, 0, 0, 0.3),
-                                )
-                              ]
-                            ),
+                          FutureBuilder<int?>(
+                            future: getStreak(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return CircularProgressIndicator();
+                              } else if (snapshot.hasError) {
+                                return Text('Error loading Streak');
+                              } else if (!snapshot.hasData || snapshot.data == null) {
+                                return Text('E R R O R',style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blueAccent,
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(2.0, 2.0),
+                                        blurRadius: 4.0,
+                                        color: Color.fromRGBO(0, 0, 0, 0.3),
+                                      )
+                                    ]
+                                  ),);
+                              } else {
+                                return Text(
+                                  snapshot.data!.toString(),
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blueAccent,
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(2.0, 2.0),
+                                        blurRadius: 4.0,
+                                        color: Color.fromRGBO(0, 0, 0, 0.3),
+                                      )
+                                    ]
+                                  ),
+                                );
+                              }
+                            },
                           ),
                           const SizedBox(height: 8),
                           const Text(
@@ -150,7 +234,7 @@ class ProfileState extends State<Profile> {
               ),
             ),
             const SizedBox(height: 30),
-            const Text(
+            /*const Text(
               'F R I E N D S',
               style: TextStyle(
                 fontSize: 24,
@@ -159,7 +243,7 @@ class ProfileState extends State<Profile> {
                 color: Colors.blueAccent,
               ),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 10),*/
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 300),
               child: SingleChildScrollView(

@@ -25,7 +25,7 @@ class _LoginState extends State<Login> {
     if (validUser) {
       await Session.instance.setUser(username);
       if (mounted) {
-        Navigator.push(
+        Navigator.pushReplacement(
           context, 
           MaterialPageRoute(builder: (context) => const Home()),
         );
