@@ -11,18 +11,12 @@ class Quests extends StatefulWidget {
 class QuestsState extends State<Quests> { 
   DbHelper db = DbHelper.instance;
   final List<Map<String,dynamic>> quests = [
-    {"name": "Finish 10 Lessons", "progress": 60},
-    {"name": "Do 2 Mastery Challenges", "progress": 50},
-    {"name": "Fix 10 Mistakes", "progress": 80},
+    {"name": "Finish 10 Lessons", "xp": 50,"progress": 60},
+    {"name": "Do 2 Mastery Challenges", "xp": 100,"progress": 50},
+    {"name": "Fix 10 Mistakes", "xp": 20,"progress": 80},
   ];
 
-  void updateProgress(int index, int newProgress) {
-    setState(() {
-      quests[index]["progress"] = newProgress;
-    });
-  }
-
-  Widget questCard(String name, int progress, int index) {
+  Widget questCard(String name, int xp, int progress, int index) {
     return Card(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
@@ -48,7 +42,6 @@ class QuestsState extends State<Quests> {
                 ],
               ),
               SizedBox(height: 15),
-
               LinearProgressIndicator(
                 value: progress / 100,
                 backgroundColor: Colors.grey[300],
@@ -56,17 +49,10 @@ class QuestsState extends State<Quests> {
               ),
               SizedBox(height: 8),
               Text(
-                '$progress% completed',
+                '$xp XP',
                 style: TextStyle(color: Colors.grey[600]),
               ),
-
               SizedBox(height: 15),
-              ElevatedButton(
-                onPressed: () {
-                  updateProgress(index, progress + 10);
-                },
-                child: Text('Start Quest'),
-              ),
             ],
           ),
         ),
@@ -97,7 +83,7 @@ class QuestsState extends State<Quests> {
             Expanded(
               child: ListView.builder(
                 itemCount: quests.length,
-                itemBuilder: (context, index) => questCard(quests[index]["name"], quests[index]["progress"],index)
+                itemBuilder: (context, index) => questCard(quests[index]["name"], quests[index]["xp"],quests[index]["progress"],index)
               ),
             )
           ],

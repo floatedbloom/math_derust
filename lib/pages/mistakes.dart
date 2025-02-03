@@ -46,7 +46,18 @@ class MistakesState extends State<Mistakes> {
                 ]
               ),),
             SizedBox(height: 20),
-            ConstrainedBox(
+            mistakes.isEmpty ? 
+                Center(
+                  child: Text(
+                    "No Mistakes To Fix",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: Color.fromARGB(255, 120, 120, 120),
+                    ),
+                  )
+                )
+            : ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 900),
               child: SingleChildScrollView(
                 child: Column(
@@ -57,9 +68,9 @@ class MistakesState extends State<Mistakes> {
                     //makes widget for each mistake
                     return mistakeWidget(name, category, difficulty);
                   }).toList(),
+                  ),
                 ),
               )
-            )
           ],
         ),
       )

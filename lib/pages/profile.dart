@@ -64,15 +64,17 @@ class ProfileState extends State<Profile> {
                 ]
               ),
             ),
-            Text(
-              Session.instance.currentUsername as String,
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w500,
-                color: Color.fromARGB(255, 120, 120, 120),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                Session.instance.currentUsername as String,
+                style: TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.w500,
+                  color: Color.fromARGB(255, 120, 120, 120),
+                ),
               ),
             ),
-            const SizedBox(height: 10),
             FutureBuilder<String?>(
               future: getClassValue(),
               builder: (context, snapshot) {
@@ -82,15 +84,22 @@ class ProfileState extends State<Profile> {
                   return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Text('Error loading class'));
                 } else if (!snapshot.hasData || snapshot.data == null) {
                   return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Center(child: Text('CLASS NOT SET',style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                        color: Color.fromARGB(255, 120, 120, 120),
-                      ),)));
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color.fromARGB(255, 163, 4, 4),
+                      shadows: [
+                        Shadow(
+                          offset: Offset(2.0, 2.0),
+                          blurRadius: 4.0,
+                          color: Color.fromRGBO(0, 0, 0, 0.3),
+                        )
+                      ]
+                    ),)));
                 } else {
-                  return ConstrainedBox(
-                    constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),
+                  return FittedBox(
+                    fit: BoxFit.scaleDown,
                     child: Text(
-                      snapshot.data!,
+                      "(${snapshot.data!})",
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w500,
@@ -101,7 +110,7 @@ class ProfileState extends State<Profile> {
                 }
               },
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 250),
               child: GridView.count(
@@ -138,7 +147,7 @@ class ProfileState extends State<Profile> {
                                 return Text('E R R O R',style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.blueAccent,
+                                    color: const Color.fromARGB(255, 163, 4, 4),
                                     shadows: [
                                       Shadow(
                                         offset: Offset(2.0, 2.0),
@@ -151,7 +160,7 @@ class ProfileState extends State<Profile> {
                                 return Text(
                                   snapshot.data!.toString(),
                                   style: TextStyle(
-                                    fontSize: 20,
+                                    fontSize: 30,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.blueAccent,
                                     shadows: [

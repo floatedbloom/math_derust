@@ -40,8 +40,8 @@ class DbHelper {
         password TEXT NOT NULL,
         xp INTEGER DEFAULT 0,
         friends TEXT,
-        class TEXT
-        streak INTEGER DEFAULT 0,
+        class TEXT,
+        streak INTEGER DEFAULT 0
       )
     ''');
 
@@ -71,7 +71,7 @@ class DbHelper {
         title TEXT,
         content TEXT NOT NULL,
         likes INTEGER DEFAULT 0,
-        parent_id INTEGER,
+        parent_id INTEGER DEFAULT -1,
         FOREIGN KEY (creator_id) REFERENCES users (id),
         FOREIGN KEY (parent_id) REFERENCES community (id)
       )
@@ -152,5 +152,15 @@ class DbHelper {
     String path = join(await getDatabasesPath(), 'math_derust.db');
     await deleteDatabase(path);
     print('Database deleted!');
+  }
+
+  Future<List<Map<String,dynamic>>> queryPostsWithComments(postId) async {
+    Database db = await database;
+    return await db.rawQuery ('''
+      SELECT posts.id, posts.title, posts.content, comments.content AS comment, comments.timestamp 
+      FROM posts 
+      LEFT JOIN comments ON posts.id = comments.post_id 
+      WHERE posts.id = ?
+    ''',[postId]);
   }
 }
