@@ -6,7 +6,7 @@ import 'session.dart';
 //import 'data/db.dart';
 
 void main() {
-  //WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   //await DbHelper.instance.deleteDatabaseFile();
   runApp(const MainApp());
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/db.dart';
 import '../session.dart';
@@ -23,6 +24,7 @@ class _LoginState extends State<Login> {
     bool validUser = await db.validateUser(username, password);
     if (validUser) {
       await Session.instance.setUser(username);
+      await updateStreak();
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context, 
@@ -110,4 +112,32 @@ class _LoginState extends State<Login> {
       ),
     );
   }
+}
+// Streak updater
+Future<void> updateStreak() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String lastLogin = prefs.getString('lastLogin') ?? ''; 
+  int streak = prefs.getInt('streak') ?? 0;
+
+  DateTime today = DateTime.now();
+  DateTime? lastLoginDate = lastLogin.isNotEmpty ? DateTime.tryParse(lastLogin) : null;
+
+  if (lastLoginDate == null || !_isSameDay(today, lastLoginDate)) {
+    if (lastLoginDate != null && _isYesterday(today, lastLoginDate)) {
+      streak++;
+    } else {
+      streak = 1;
+    }
+
+    await prefs.setString('lastLogin', today.toIso8601String());
+    await prefs.setInt('streak', streak);
+  }
+}
+
+bool _isSameDay(DateTime a, DateTime b) {
+  return a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+bool _isYesterday(DateTime today, DateTime last) {
+  return today.difference(last).inDays == 1;
 }

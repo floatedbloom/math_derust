@@ -21,15 +21,61 @@ class CommunityState extends State<Community> {
   }
 
   Future<void> _loadPosts() async {
-    List<Map<String, dynamic>> fetchedPosts = await db.queryAll('community');
+    List<Map<String, dynamic>> fetchedPosts = await db.queryAll('posts');
     setState(() {
       posts = fetchedPosts;
     });
   }
 
-  void _createComment() {
-    TextEditingController contentController = TextEditingController();
-  }
+  void _createComment(int postId) {
+  TextEditingController contentController = TextEditingController();
+
+  showCupertinoDialog(
+    context: context,
+    builder: (context) {
+      return CupertinoAlertDialog(
+        title: Text("Add Comment"),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              SizedBox(height: 10),
+              CupertinoTextField(
+                controller: contentController,
+                placeholder: "Write a comment...",
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                maxLines: 5,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              String content = contentController.text.trim();
+              if (content.isNotEmpty) {
+                Map<String, dynamic> row = {
+                  "parent_id": postId,
+                  "creator_id": Session.instance.currentUserId,
+                  "content": content,
+                };
+                await db.insert('comments', row);
+                Navigator.pop(context);
+                _loadPosts(); // Reload to show new comments
+              }
+            },
+            child: Text("Post"),
+          ),
+        ],
+      );
+    }
+  );
+}
+
 
   void _createPost() {
     TextEditingController titleController = TextEditingController();
@@ -76,7 +122,7 @@ class CommunityState extends State<Community> {
                     "title": title,
                     "content":content,
                   };
-                  await db.insert('community',row);
+                  await db.insert('posts',row);
                 }
                 Navigator.pop(context);
                 _loadPosts();
@@ -135,12 +181,23 @@ class CommunityState extends State<Community> {
                 ? Center(child: CircularProgressIndicator())
                 : ListView.builder(
                 itemCount: posts.length,
-                itemBuilder: (context, index) => communityPost(
-                    posts[index]["creator_id"].toString(),
-                    posts[index]["title"] ?? "No Title",
-                    posts[index]["content"] ?? "",
-                    posts[index]["likes"] ?? 0,
-                  ),
+                itemBuilder: (context, index) {
+                  return FutureBuilder<String>(
+                    future: db.getUsernameById(posts[index]["creator_id"]),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return Center(child: CircularProgressIndicator());
+                      }
+                      return communityPost(
+                        snapshot.data ?? "Unknown User",
+                        posts[index]["title"] ?? "No Title",
+                        posts[index]["content"] ?? "",
+                        posts[index]["likes"] ?? 0,
+                        posts[index]["id"] ?? 0,
+                      );
+                    },
+                  );
+                },
               ),
             )
           ],
@@ -148,55 +205,107 @@ class CommunityState extends State<Community> {
       )
     );
   }
-}
-
-Widget communityPost(String username, String title, String content, int likes) {
-  return Card(
-    elevation: 3,
-    margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(15),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "@$username",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            title,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            content,
-            style: TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget communityPost(String username, String title, String content, int likes, int postId) {
+    return GestureDetector(
+      onTap: () => showComments(context,postId,db),
+      child: Card(
+        elevation: 3,
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text("@$username", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+              const SizedBox(height: 5),
+              Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 5),
+              Text(content, style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 10),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.favorite, color: Colors.red),
-                  const SizedBox(width: 5),
-                  Text("$likes", style: TextStyle(fontSize: 16)),
+                  Row(
+                    children: [
+                      Icon(Icons.favorite, color: Colors.red),
+                      const SizedBox(width: 5),
+                      Text("$likes", style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.comment, color: Colors.grey),
+                    onPressed: () {
+                      _createComment(postId);
+                    },
+                  )
                 ],
               ),
-              IconButton(
-                icon: Icon(Icons.comment, color: Colors.grey),
-                onPressed: () {
-                  // Handle comment functionality
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: db.queryWhere('comments', 'parent_id', [postId]),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) return SizedBox.shrink();
+                  return Column(
+                    children: snapshot.data!.map((comment) {
+                      return ListTile(
+                        title: Text("@${comment['creator_id']}", style: TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(comment['content']),
+                      );
+                    }).toList(),
+                  );
                 },
-              )
+              ),
             ],
           ),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
+  void showComments(BuildContext context, int postId, DbHelper db) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: db.queryWhere('comments', 'parent_id = ?', [postId]),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+            var comments = snapshot.data!;
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.6,
+              padding: EdgeInsets.all(10),
+              child: Column(
+                children: [
+                  Text("Comments", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: comments.isEmpty
+                      ? Center(child: Text("No comments yet"))
+                      : ListView.builder(
+                          itemCount: comments.length,
+                          itemBuilder: (context, index) {
+                            return FutureBuilder<String>(
+                              future: db.getUsernameById(comments[index]["creator_id"]),
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return Center(child: CircularProgressIndicator());
+                                }
+                                return ListTile(
+                                  title: Text("@${snapshot.data ?? "User Not Found"}", style: TextStyle(fontWeight: FontWeight.bold)),
+                                  subtitle: Text(comments[index]['content']),
+                                );
+                              }
+                            );
+                          },
+                        ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }

@@ -41,7 +41,7 @@ class DbHelper {
         xp INTEGER DEFAULT 0,
         friends TEXT,
         class TEXT,
-        streak INTEGER DEFAULT 0
+        streak INTEGER DEFAULT 1
       )
     ''');
 
@@ -50,8 +50,9 @@ class DbHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         category TEXT NOT NULL,
-        difficulty TEXT NOT NULL,
-        content TEXT NOT NULL
+        difficulty INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        answers TEXT NOT NULL
       )
     ''');
 
@@ -65,15 +66,25 @@ class DbHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE community (
+      CREATE TABLE posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         creator_id INTEGER NOT NULL,
         title TEXT,
         content TEXT NOT NULL,
         likes INTEGER DEFAULT 0,
-        parent_id INTEGER DEFAULT -1,
-        FOREIGN KEY (creator_id) REFERENCES users (id),
-        FOREIGN KEY (parent_id) REFERENCES community (id)
+        FOREIGN KEY (creator_id) REFERENCES users (id)
+      )
+    ''');
+
+     await db.execute('''
+      CREATE TABLE comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        creator_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        likes INTEGER DEFAULT 0,
+        parent_id INTEGER NOT NULL,
+        FOREIGN KEY (parent_id) REFERENCES community (id),
+        FOREIGN KEY (creator_id) REFERENCES users (id)
       )
     ''');
 
@@ -134,17 +145,17 @@ class DbHelper {
     List<Map<String,dynamic>> mistakes =  await db.query('mistakes', where: 'user_id = ?', whereArgs: [user_id]);
     List<Map<String,dynamic>> questions = [];
     for (Map<String, dynamic> mistake in mistakes) {
-    int questionId = mistake['question_id'];
-    List<Map<String, dynamic>> questionResult = await db.query(
-      'questions',
-      where: 'id = ?',
-      whereArgs: [questionId],
-    );
+      int questionId = mistake['question_id'];
+      List<Map<String, dynamic>> questionResult = await db.query(
+        'questions',
+        where: 'id = ?',
+        whereArgs: [questionId],
+      );
 
-    if (questionResult.isNotEmpty) {
-      questions.add(questionResult.first);
+      if (questionResult.isNotEmpty) {
+        questions.add(questionResult.first);
+      }
     }
-  }
     return questions;
   }
   //only use if updating db structure and dont care abt data
@@ -154,13 +165,9 @@ class DbHelper {
     print('Database deleted!');
   }
 
-  Future<List<Map<String,dynamic>>> queryPostsWithComments(postId) async {
+  Future<String> getUsernameById(int id) async {
     Database db = await database;
-    return await db.rawQuery ('''
-      SELECT posts.id, posts.title, posts.content, comments.content AS comment, comments.timestamp 
-      FROM posts 
-      LEFT JOIN comments ON posts.id = comments.post_id 
-      WHERE posts.id = ?
-    ''',[postId]);
+    var result = await db.query('users', columns: ['username'], where: 'id = ?', whereArgs: [id]);
+    return result.isNotEmpty ? result.first['username'] as String : "Unknown User";
   }
 }
