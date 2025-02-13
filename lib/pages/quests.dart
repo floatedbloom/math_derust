@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:math_derust/data/db.dart';
 
+import '../session.dart';
+
 class Quests extends StatefulWidget {
   const Quests({ super.key });
 
@@ -10,13 +12,24 @@ class Quests extends StatefulWidget {
 
 class QuestsState extends State<Quests> { 
   DbHelper db = DbHelper.instance;
-  final List<Map<String,dynamic>> quests = [
-    {"name": "Finish 10 Lessons", "xp": 50,"progress": 60},
-    {"name": "Do 2 Mastery Challenges", "xp": 100,"progress": 50},
-    {"name": "Fix 10 Mistakes", "xp": 20,"progress": 80},
-  ];
+  List<Map<String, dynamic>> quests = [];
 
-  Widget questCard(String name, int xp, int progress, int index) {
+  @override
+  void initState() {
+    super.initState();
+    loadQuests();
+  }
+
+  Future<void> loadQuests() async {
+    await db.initializeQuests();
+    List<Map<String, dynamic>> data = await db.getUserQuests(Session.instance.currentUserId ?? 0);
+    print("Loaded quests: $data");
+    setState(() {
+      quests = data;
+    });
+  }
+
+  Widget questCard(String name, int xp, int progress) {
     return Card(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
@@ -79,12 +92,18 @@ class QuestsState extends State<Quests> {
                 ]
               ),
             ),
-            SizedBox(height: 60,),
+            SizedBox(height: 60),
             Expanded(
-              child: ListView.builder(
-                itemCount: quests.length,
-                itemBuilder: (context, index) => questCard(quests[index]["name"], quests[index]["xp"],quests[index]["progress"],index)
-              ),
+              child: quests.isEmpty
+                  ? Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      itemCount: quests.length,
+                      itemBuilder: (context, index) => questCard(
+                        quests[index]["name"],
+                        quests[index]["xp"],
+                        quests[index]["progress"],
+                      ),
+                    ),
             )
           ],
         ),

@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+import '../session.dart';
+
 /* 
   Add stuff for community page later, like upvoting posts and things like that
   Add user stuff later, like user xp
@@ -52,7 +54,8 @@ class DbHelper {
         category TEXT NOT NULL,
         difficulty INTEGER NOT NULL,
         content TEXT NOT NULL,
-        answers TEXT NOT NULL
+        answers TEXT NOT NULL,
+        correct TEXT NOT NULL
       )
     ''');
 
@@ -61,7 +64,20 @@ class DbHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         condition TEXT NOT NULL,
-        xp INTEGER NOT NULL
+        xp INTEGER NOT NULL,
+        goal INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE user_quests (
+        user_id INTEGER NOT NULL,
+        quest_id INTEGER NOT NULL,
+        progress INTEGER DEFAULT 0,  -- Tracks progress
+        completed BOOLEAN DEFAULT 0, -- Marks quest completion
+        PRIMARY KEY (user_id, quest_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE
       )
     ''');
 
@@ -169,5 +185,72 @@ class DbHelper {
     Database db = await database;
     var result = await db.query('users', columns: ['username'], where: 'id = ?', whereArgs: [id]);
     return result.isNotEmpty ? result.first['username'] as String : "Unknown User";
+  }
+
+  Future<bool> checkAnswer(String questionName, String userAnswer) async {
+    Database db = await database;
+    
+    List<Map<String, dynamic>> result = await db.query(
+      'questions',
+      columns: ['correct'],
+      where: 'id = ?',
+      whereArgs: [questionName],
+    );
+    
+    if (result.isEmpty) return false;
+    
+    String correct = result.first['correct'] as String;
+    String correctAnswer = correct.trim();
+    
+    return correctAnswer.toLowerCase() == userAnswer.trim().toLowerCase();
+  }
+
+  Future<List<Map<String, dynamic>>> getUserQuests(int userId) async {
+     print("Fetching quests for user: ${Session.instance.currentUserId}");
+    final db = await database;
+     print("Database AWAITED!");
+
+    await db.insert('user_quests', {'user_id': 1, 'quest_id': 1, 'progress': 0});
+
+    final List<Map<String, dynamic>> result = await db.query('user_quests');
+    print("User quests table: $result");
+
+    final List<Map<String, dynamic>> res = await db.query(
+      'user_quests',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
+    print("Quests for user $userId: $res");
+
+    final List<Map<String, dynamic>> ans = await db.query('quests');
+    print("Quests table: $ans");
+
+    final List<Map<String, dynamic>> answer = await db.query('user_quests');
+    print("User quests without JOIN: $answer");
+
+    return await db.rawQuery('''
+      SELECT quests.id, quests.name, quests.xp, user_quests.progress, quests.goal
+      FROM user_quests
+      JOIN quests ON user_quests.quest_id = quests.id
+      WHERE user_quests.user_id = ?
+    ''', [userId]);
+  }
+
+  Future<void> initializeQuests() async {
+    print("Initializing quests...");
+    final db = await database;
+    print("Database retrieved!");
+
+    List<Map<String, dynamic>> quests = [
+      {"name": "Finish 10 Lessons", "condition": "Complete 10 lessons", "xp": 50, "goal": 10},
+      {"name": "Do 2 Mastery Challenges", "condition": "Complete 2 mastery challenges", "xp": 100, "goal": 2},
+      {"name": "Fix 10 Mistakes", "condition": "Correct 10 incorrect answers", "xp": 20, "goal": 10},
+      {"name": "Earn 500 XP", "condition": "Gain a total of 500 XP", "xp": 200, "goal": 500},
+    ];
+
+    for (var quest in quests) {
+      await db.insert("quests", quest);
+    }
+    print("Quests initialized!");
   }
 }

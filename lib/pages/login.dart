@@ -72,11 +72,13 @@ class _LoginState extends State<Login> {
             padding: const EdgeInsets.all(25),
             child: Column(
               children: [
+                SizedBox(height: 30),
                 //username field
                 TextField(
                   controller: _usernameController,
                   decoration: const InputDecoration(labelText: 'U S E R N A M E'),
                 ),
+                SizedBox(height: 30),
                 //password field
                 TextField(
                   controller: _passwordController,

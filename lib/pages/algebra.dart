@@ -12,7 +12,7 @@ class _AlgebraPageState extends State<AlgebraPage> {
   DbHelper db = DbHelper.instance;
   List<Map<String,dynamic>> questions = [];
 
-  List<Map<String,dynamic>> newProblems = [
+  List<Map<String,dynamic>> newProblems = [/*
     {
       'name': 'Problem 1',
       'category': 'Algebra',
@@ -47,7 +47,7 @@ class _AlgebraPageState extends State<AlgebraPage> {
       'difficulty': 3,
       'content': 'Solve the following for x: 2/3 * x = 6',
       'answers': '4;2;9;3',
-    },
+    },*/
   ];
 
   Future<void> _addProblems(List<Map<String,dynamic>> newProblems) async {
@@ -122,18 +122,37 @@ class _AlgebraPageState extends State<AlgebraPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(name),
         content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(content, style: TextStyle(fontSize: 16)),
-              SizedBox(height: 10),
-              ListView.builder(
-                itemCount: answers.length,
-                itemBuilder: (context,index) => Text("Answer: ${answers[index]}", style: TextStyle(fontWeight: FontWeight.bold)),
-              )
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(content, style: TextStyle(fontSize: 16)),
+                SizedBox(height: 10),
+                Column(
+                  children: answers.map((answer) => ElevatedButton(
+                    onPressed: () async {
+                      if (await db.checkAnswer(name, answer)) {
+                        
+                      } else {
+
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text("Answer: $answer", style: TextStyle(fontWeight: FontWeight.bold))
+                  )).toList(),
+                )
+              ],
+            ),
           ),
         ),
         actions: [
