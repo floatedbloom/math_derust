@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:math_derust/data/db.dart';
+import 'package:math_derust/session.dart';
+import 'package:rive/rive.dart';
 
 class AlgebraPage extends StatefulWidget {
   const AlgebraPage({super.key});
@@ -19,6 +21,7 @@ class _AlgebraPageState extends State<AlgebraPage> {
       'difficulty': 1,
       'content': 'Simplify the following: 5 + -20',
       'answers': '25;-25;15;-15',
+      'correct': '-15',
     },
     {
       'name': 'Problem 2',
@@ -26,6 +29,7 @@ class _AlgebraPageState extends State<AlgebraPage> {
       'difficulty': 2,
       'content': 'Simplify the following: 4a(2+4)-3a',
       'answers': '21a;16a-3;15a;4a',
+      'correct': '21a',
     },
     {
       'name': 'Problem 3',
@@ -33,6 +37,7 @@ class _AlgebraPageState extends State<AlgebraPage> {
       'difficulty': 2,
       'content': 'Solve the following for y: 5y + 13 = 2y - 2',
       'answers': '5;-5;15;-15',
+      'correct': '-5',
     },
     {
       'name': 'Problem 4',
@@ -40,6 +45,7 @@ class _AlgebraPageState extends State<AlgebraPage> {
       'difficulty': 2,
       'content': 'Solve the following for x: 14x = 84',
       'answers': '1/6;-1/6;6;-6',
+      'correct': '6',
     },
     {
       'name': 'Problem 5',
@@ -47,6 +53,7 @@ class _AlgebraPageState extends State<AlgebraPage> {
       'difficulty': 3,
       'content': 'Solve the following for x: 2/3 * x = 6',
       'answers': '4;2;9;3',
+      'correct': '9',
     },*/
   ];
 
@@ -133,22 +140,26 @@ class _AlgebraPageState extends State<AlgebraPage> {
                 Text(content, style: TextStyle(fontSize: 16)),
                 SizedBox(height: 10),
                 Column(
-                  children: answers.map((answer) => ElevatedButton(
-                    onPressed: () async {
-                      if (await db.checkAnswer(name, answer)) {
-                        
-                      } else {
-
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  children: answers.map((answer) => Center(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        bool isCorrect = await db.checkAnswer(name, answer,'Algebra');
+                        if (isCorrect) {
+                          await db.updateUserQuestProgress(Session.instance.currentUserId ?? 0, 1, 1);
+                        }
+                        print(answer);
+                        print(isCorrect);
+                        _showResultAnimation(isCorrect);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 27, 50, 56),
+                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
+                      child: Text("Answer: $answer", style: TextStyle(fontWeight: FontWeight.bold))
                     ),
-                    child: Text("Answer: $answer", style: TextStyle(fontWeight: FontWeight.bold))
                   )).toList(),
                 )
               ],
@@ -160,5 +171,26 @@ class _AlgebraPageState extends State<AlgebraPage> {
         ],
       ),
     );
+  }
+  void _showResultAnimation(bool isCorrect) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Container(
+          width: 150,
+          height: 150,
+          child: RiveAnimation.asset(
+            isCorrect ? 'assets/checkmark_icon.riv' : 'assets/error_icon.riv',
+          ),
+        ),
+      ),
+    );
+
+    // Close the animation dialog after 1.5 seconds
+    Future.delayed(Duration(milliseconds: 1500), () {
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+    });
   }
 }

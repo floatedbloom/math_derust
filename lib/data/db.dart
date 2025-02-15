@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -187,59 +188,81 @@ class DbHelper {
     return result.isNotEmpty ? result.first['username'] as String : "Unknown User";
   }
 
-  Future<bool> checkAnswer(String questionName, String userAnswer) async {
+  Future<bool> checkAnswer(String questionName, String userAnswer, String category) async {
     Database db = await database;
-    
+    category = category.trim();
     List<Map<String, dynamic>> result = await db.query(
       'questions',
-      columns: ['correct'],
-      where: 'id = ?',
-      whereArgs: [questionName],
+      columns: ['id','correct'],
+      where: 'name = ? AND category = ?',
+      whereArgs: [questionName,category],
     );
     
     if (result.isEmpty) return false;
+
+    int questionId = result.first['id'] as int;
     
     String correct = result.first['correct'] as String;
     String correctAnswer = correct.trim();
+    bool isCorrect = correctAnswer.toLowerCase() == userAnswer.trim().toLowerCase();
+
+     if (!isCorrect) {
+      List<Map<String, dynamic>> mistakeExists = await db.query(
+        'mistakes',
+        where: 'user_id = ? AND question_id = ?',
+        whereArgs: [Session.instance.currentUserId, questionId],
+      );
+
+      if (mistakeExists.isEmpty) {
+        await db.insert('mistakes', {
+          'user_id': Session.instance.currentUserId,
+          'question_id': questionId,
+        });
+      }
+    }
     
-    return correctAnswer.toLowerCase() == userAnswer.trim().toLowerCase();
+    return isCorrect;
   }
 
   Future<List<Map<String, dynamic>>> getUserQuests(int userId) async {
-     print("Fetching quests for user: ${Session.instance.currentUserId}");
     final db = await database;
-     print("Database AWAITED!");
+    
+    /*// the initial quests for everyone
+    List<Map<String, dynamic>> quests = await db.query('quests');
+    for (var quest in quests) {
+      int questId = quest['id'];
+      List<Map<String, dynamic>> existing = await db.query(
+        'user_quests',
+        where: 'user_id = ? AND quest_id = ?',
+        whereArgs: [userId, questId],
+      );
 
-    await db.insert('user_quests', {'user_id': 1, 'quest_id': 1, 'progress': 0});
-
-    final List<Map<String, dynamic>> result = await db.query('user_quests');
-    print("User quests table: $result");
-
-    final List<Map<String, dynamic>> res = await db.query(
-      'user_quests',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-    );
-    print("Quests for user $userId: $res");
-
-    final List<Map<String, dynamic>> ans = await db.query('quests');
-    print("Quests table: $ans");
-
-    final List<Map<String, dynamic>> answer = await db.query('user_quests');
-    print("User quests without JOIN: $answer");
-
-    return await db.rawQuery('''
-      SELECT quests.id, quests.name, quests.xp, user_quests.progress, quests.goal
+      if (existing.isEmpty) {
+        await db.insert('user_quests', {
+          'user_id': userId,
+          'quest_id': questId,
+          'progress': 0,
+          'completed': 0,
+        });
+        print("Assigned quest '${quest['name']}' to user $userId");
+      }
+    }*/
+    List<Map<String, dynamic>> userTable = await db.query('user_quests');
+    final List<Map<String, dynamic>> userQuests = await db.rawQuery('''
+      SELECT quests.id, quests.name, quests.xp, user_quests.progress, user_quests.completed, quests.goal
       FROM user_quests
       JOIN quests ON user_quests.quest_id = quests.id
       WHERE user_quests.user_id = ?
     ''', [userId]);
+
+    return userQuests;
   }
 
   Future<void> initializeQuests() async {
-    print("Initializing quests...");
     final db = await database;
-    print("Database retrieved!");
+    //check if its already initialized
+    List<Map<String, dynamic>> existingQuests = await db.query('quests');
+    if (existingQuests.isNotEmpty) return;
 
     List<Map<String, dynamic>> quests = [
       {"name": "Finish 10 Lessons", "condition": "Complete 10 lessons", "xp": 50, "goal": 10},
@@ -251,6 +274,112 @@ class DbHelper {
     for (var quest in quests) {
       await db.insert("quests", quest);
     }
-    print("Quests initialized!");
+  }
+
+  Future<void> updateUserQuestProgress(int userId, int questId, int progressIncrease) async {
+    final db = await database;
+      List<Map<String, dynamic>> existingQuest = await db.query(
+      'user_quests',
+      where: 'user_id = ? AND quest_id = ?',
+      whereArgs: [userId, questId],
+    );
+
+    if (existingQuest.isEmpty) {
+      print("Quest not found for user: $userId");
+      return;
+    }
+
+    int currentProgress = existingQuest.first['progress'] as int;
+
+    List<Map<String, dynamic>> questData = await db.query(
+      'quests',
+      where: 'id = ?',
+      whereArgs: [questId],
+    );
+
+    if (questData.isEmpty) {
+      print("Quest details not found for quest ID: $questId");
+      return;
+    }
+
+    int goal = questData.first['goal'] as int;
+    int newProgress = currentProgress + progressIncrease;
+
+    bool completed = newProgress >= goal;
+
+    await db.update(
+      'user_quests',
+      {
+        'progress': newProgress > goal ? goal : newProgress, 
+        'completed': completed ? 1 : 0
+      },
+      where: 'user_id = ? AND quest_id = ?',
+      whereArgs: [userId, questId],
+    );
+
+    print("Updated progress for User $userId on Quest $questId: $newProgress / $goal");
+  }
+
+  Future<void> resetDailyQuests() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastReset = prefs.getString('last_reset_date');
+    final today = DateTime.now().toIso8601String().substring(0, 10); // Format: YYYY-MM-DD
+
+    if (lastReset == today) {
+      print("Quests already reset today.");
+      return; // Avoid resetting multiple times in a day
+    }
+
+    final db = await database;
+    await db.update(
+      'user_quests',
+      {'completed': 0},
+    );
+
+    await prefs.setString('last_reset_date', today); // Store today's date
+    print("Daily quests reset!");
+  }
+
+  Future<void> removeMistake(int userId, int questionId) async {
+    Database db = await database;
+
+    await db.delete(
+      'mistakes',
+      where: 'user_id = ? AND question_id = ?',
+      whereArgs: [userId, questionId],
+    );
+  }
+
+  Future<int?> getQuestionIdByNameAndCategory(String questionName, String category) async {
+    Database db = await database;
+
+    List<Map<String, dynamic>> result = await db.query(
+      'questions',
+      columns: ['id'],
+      where: 'name = ? AND category = ?',
+      whereArgs: [questionName,category],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first['id'] as int;
+    }
+    return null;
+  }
+  
+  Future<String?> getQuestionCategoryById(int questionId) async {
+    Database db = await database;
+
+    List<Map<String, dynamic>> result = await db.query(
+      'questions',
+      columns: ['category'],
+      where: 'id = ?',
+      whereArgs: [questionId],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first['category'] as String;
+    }
+
+    return null;
   }
 }

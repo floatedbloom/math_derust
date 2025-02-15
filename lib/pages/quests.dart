@@ -23,13 +23,14 @@ class QuestsState extends State<Quests> {
   Future<void> loadQuests() async {
     await db.initializeQuests();
     List<Map<String, dynamic>> data = await db.getUserQuests(Session.instance.currentUserId ?? 0);
-    print("Loaded quests: $data");
     setState(() {
-      quests = data;
+      for (Map<String, dynamic> elem in data) {
+        if (elem["completed"] > -1) quests.add(elem);
+      }
     });
   }
 
-  Widget questCard(String name, int xp, int progress) {
+  Widget questCard(String name, int xp, int progress, int completed, int goal) {
     return Card(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
@@ -52,11 +53,13 @@ class QuestsState extends State<Quests> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  Spacer(),
+                  if (completed > 0) Icon(Icons.check_circle, color: Colors.green, size: 24),
                 ],
               ),
               SizedBox(height: 15),
               LinearProgressIndicator(
-                value: progress / 100,
+                value: progress / goal,
                 backgroundColor: Colors.grey[300],
                 color: Colors.green,
               ),
@@ -102,6 +105,8 @@ class QuestsState extends State<Quests> {
                         quests[index]["name"],
                         quests[index]["xp"],
                         quests[index]["progress"],
+                        quests[index]["completed"],
+                        quests[index]["goal"],
                       ),
                     ),
             )

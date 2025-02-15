@@ -25,6 +25,7 @@ class _LoginState extends State<Login> {
     if (validUser) {
       await Session.instance.setUser(username);
       await updateStreak();
+      await DbHelper.instance.resetDailyQuests();
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context, 
