@@ -71,44 +71,51 @@ class _LoginState extends State<Login> {
           ),
           body: Padding(
             padding: const EdgeInsets.all(25),
-            child: Column(
-              children: [
-                SizedBox(height: 30),
-                //username field
-                TextField(
-                  controller: _usernameController,
-                  decoration: const InputDecoration(labelText: 'U S E R N A M E'),
-                ),
-                SizedBox(height: 30),
-                //password field
-                TextField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'P A S S W O R D'),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _login, 
-                  child: const Text(
-                    'L O G I N', 
-                    style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(height: 30),
+                  //username field
+                  TextField(
+                    controller: _usernameController,
+                    decoration: const InputDecoration(labelText: 'U S E R N A M E'),
                   ),
-                ),
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context, 
-                      MaterialPageRoute(
-                        builder: (context) =>  const CreateAccount(),
-                      ),
-                    );
-                  }, 
-                  child: const Text(
-                    'Create Account', 
-                    style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                  SizedBox(height: 30),
+                  //password field
+                  TextField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(labelText: 'P A S S W O R D'),
                   ),
-                )
-              ],
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _login, 
+                    child: const Text(
+                      'L O G I N', 
+                      style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context, 
+                        MaterialPageRoute(
+                          builder: (context) =>  const CreateAccount(),
+                        ),
+                      );
+                    }, 
+                    child: const Text(
+                      'Create Account', 
+                      style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height:500),
+                  const Text(
+                      'B Y   G E O R G I Y   L A P I N', 
+                      style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

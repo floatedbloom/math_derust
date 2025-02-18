@@ -53,7 +53,7 @@ class MistakesState extends State<Mistakes> {
                         print(isCorrect);
                         if (isCorrect) {
                           await db.removeMistake(Session.instance.currentUserId ?? 0, questionId);
-                          await db.updateUserQuestProgress(Session.instance.currentUserId ?? 0, 2, 1);
+                          await db.updateUserQuestProgress(Session.instance.currentUserId ?? 0, 3, 1);
                           await _loadMistakes();
                         }
                         _showResultAnimation(isCorrect);

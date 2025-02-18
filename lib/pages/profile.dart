@@ -15,6 +15,26 @@ class Profile extends StatefulWidget {
 
 class ProfileState extends State<Profile> {
   DbHelper db = DbHelper.instance;
+  Map<String, int> xps = {
+    'xp_tot': 0,
+    'xp_algebra': 0,
+    'xp_geometry': 0,
+    'xp_intalg': 0,
+    'xp_trig': 0,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserXp();
+  }
+
+  Future<void> loadUserXp() async {
+    Map<String, int> fetchedXp = await db.getUserXp(Session.instance.currentUserId ?? 0);
+    setState(() {
+      xps = fetchedXp;
+    });
+  }
 
   Future<String?> getClassValue() async {
     List<Map<String, dynamic>> result = await db.queryWhere(
@@ -221,14 +241,19 @@ class ProfileState extends State<Profile> {
                                       Color.fromRGBO(0, 0, 0, 0.3),
                                       BlendMode.darken,
                                     ),
-                                    child: PieChartWidget()
+                                    child: PieChartWidget(
+                                      xpAlgebra: xps['xp_algebra'] ?? 0,
+                                      xpGeometry: xps['xp_geometry'] ?? 0,
+                                      xpIntAlg: xps['xp_intalg'] ?? 0,
+                                      xpTrig: xps['xp_trig'] ?? 0
+                                    )
                                   ),
                                 )
                               ),
                             ),
                             Center(
                               child: Text(
-                                "10000 XP",
+                                "${xps['xp_tot']} XP",
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
@@ -286,36 +311,66 @@ class ProfileState extends State<Profile> {
 }
 
 class PieChartWidget extends StatelessWidget {
-  const PieChartWidget({super.key});
+  final int xpAlgebra;
+  final int xpGeometry;
+  final int xpIntAlg;
+  final int xpTrig;
+
+  const PieChartWidget({
+    super.key,
+    required this.xpAlgebra,
+    required this.xpGeometry,
+    required this.xpIntAlg,
+    required this.xpTrig,
+  });
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size(300, 300),
-      painter: PieChartPainter(),
+      painter: PieChartPainter(
+        xpAlgebra: xpAlgebra,
+        xpGeometry: xpGeometry,
+        xpIntAlg: xpIntAlg,
+        xpTrig: xpTrig,
+      ),
     );
   }
 }
 
 class PieChartPainter extends CustomPainter {
+  final int xpAlgebra;
+  final int xpGeometry;
+  final int xpIntAlg;
+  final int xpTrig;
+
+  PieChartPainter({
+    required this.xpAlgebra,
+    required this.xpGeometry,
+    required this.xpIntAlg,
+    required this.xpTrig,
+  });
+
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..style = PaintingStyle.fill;
+    final Paint paint = Paint()..style = PaintingStyle.fill;
     double startAngle = 0.0;
+    
     List<Color> colors = [
-      Color(0xFFB0BEC5),
-      Color.fromARGB(255, 104, 158, 106),
-      Color.fromARGB(255, 197, 131, 66),
-      Color.fromARGB(255, 204, 93, 93),
+      Color(0xFFB0BEC5), // Algebra
+      Color.fromARGB(255, 104, 158, 106), // Geometry
+      Color.fromARGB(255, 197, 131, 66), // Intermediate Algebra
+      Color.fromARGB(255, 204, 93, 93), // Trigonometry
     ];
-    List<double> sliceAngles = List.generate(4, (_) => Random().nextDouble() * pi);
-    double totalAngle = sliceAngles.reduce((a, b) => a + b);
-    sliceAngles = sliceAngles.map((angle) => angle / totalAngle * (2 * pi)).toList();
+    
+    List<int> xpValues = [xpAlgebra, xpGeometry, xpIntAlg, xpTrig];
+    int totalXp = xpValues.reduce((a, b) => a + b);
+    
+    if (totalXp == 0) return; // Avoid division by zero
 
-    for (int i = 0; i < sliceAngles.length; i++) {
+    for (int i = 0; i < xpValues.length; i++) {
       paint.color = colors[i % colors.length];
-      double sweepAngle = sliceAngles[i];
+      double sweepAngle = (xpValues[i] / totalXp) * (2 * pi);
       canvas.drawArc(
         Rect.fromCircle(center: Offset(size.width / 2, size.height / 2), radius: size.width / 2),
         startAngle,
@@ -329,7 +384,7 @@ class PieChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
+    return true; // Repaint if XP values change
   }
 }
 

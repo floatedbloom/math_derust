@@ -135,6 +135,11 @@ class CommunityState extends State<Community> {
     );
   }
 
+  Future<void> likeContent(int commentId, String table, DbHelper db, Function updateLikes) async {
+    await db.likeContent(commentId, table);
+    updateLikes();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -228,19 +233,37 @@ class CommunityState extends State<Community> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.favorite, color: Colors.red),
-                      const SizedBox(width: 5),
-                      Text("$likes", style: TextStyle(fontSize: 16)),
-                    ],
+                  StatefulBuilder(
+                    builder: (context, setState) {
+                      return Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () async {
+                              await db.likeContent(postId, 'post');
+                              setState(() => likes++);
+                            },
+                            child: AnimatedSwitcher(
+                              duration: Duration(milliseconds: 200),
+                              transitionBuilder: (child, animation) {
+                                return ScaleTransition(scale: animation, child: child);
+                              },
+                              child: Icon(Icons.favorite, 
+                                key: ValueKey(likes), 
+                                color: Colors.red, size: 24),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text("$likes", style: TextStyle(fontSize: 16)),
+                        ],
+                      );
+                    },
                   ),
                   IconButton(
                     icon: Icon(Icons.comment, color: Colors.grey),
                     onPressed: () {
                       _createComment(postId);
                     },
-                  )
+                  ),
                 ],
               ),
               FutureBuilder<List<Map<String, dynamic>>>(
@@ -291,14 +314,50 @@ class CommunityState extends State<Community> {
                                 if (!snapshot.hasData) {
                                   return Center(child: CircularProgressIndicator());
                                 }
-                                return ListTile(
-                                  title: Text("@${snapshot.data ?? "User Not Found"}", style: TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: Text(comments[index]['content']),
+                                int likeCount = comments[index]['likes'];
+
+                                return StatefulBuilder(
+                                  builder: (context, setState) {
+                                    return ListTile(
+                                      title: Text("@${snapshot.data ?? "User Not Found"}", 
+                                        style: TextStyle(fontWeight: FontWeight.bold)),
+                                      subtitle: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(comments[index]['content']),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              GestureDetector(
+                                                onTap: () async {
+                                                  await likeContent(comments[index]["id"], 'comments', db, () {
+                                                    setState(() => likeCount++);
+                                                  });
+                                                },
+                                                child: AnimatedSwitcher(
+                                                  duration: Duration(milliseconds: 200),
+                                                  transitionBuilder: (child, animation) {
+                                                    return ScaleTransition(scale: animation, child: child);
+                                                  },
+                                                  child: Icon(Icons.favorite, 
+                                                    key: ValueKey(likeCount), 
+                                                    color: Colors.red, size: 20),
+                                                ),
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(likeCount.toString(), 
+                                                style: TextStyle(fontSize: 14)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
                                 );
-                              }
+                              },
                             );
-                          },
-                        ),
+                          }
+                      ), 
                   ),
                 ],
               ),

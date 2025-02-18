@@ -41,7 +41,12 @@ class DbHelper {
         username TEXT NOT NULL,
         email TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
-        xp INTEGER DEFAULT 0,
+        xp_tot INTEGER GENERATED ALWAYS AS (xp_algebra + xp_geometry + xp_intalg + xp_trig + xp_quest) STORED,
+        xp_algebra INTEGER DEFAULT 0,
+        xp_geometry INTEGER DEFAULT 0,
+        xp_intalg INTEGER DEFAULT 0,
+        xp_trig INTEGER DEFAULT 0,
+        xp_quest INTEGER DEFAULT 0,
         friends TEXT,
         class TEXT,
         streak INTEGER DEFAULT 1
@@ -227,7 +232,7 @@ class DbHelper {
   Future<List<Map<String, dynamic>>> getUserQuests(int userId) async {
     final db = await database;
     
-    /*// the initial quests for everyone
+    // the initial quests for everyone
     List<Map<String, dynamic>> quests = await db.query('quests');
     for (var quest in quests) {
       int questId = quest['id'];
@@ -246,8 +251,7 @@ class DbHelper {
         });
         print("Assigned quest '${quest['name']}' to user $userId");
       }
-    }*/
-    List<Map<String, dynamic>> userTable = await db.query('user_quests');
+    }
     final List<Map<String, dynamic>> userQuests = await db.rawQuery('''
       SELECT quests.id, quests.name, quests.xp, user_quests.progress, user_quests.completed, quests.goal
       FROM user_quests
@@ -306,6 +310,25 @@ class DbHelper {
     int newProgress = currentProgress + progressIncrease;
 
     bool completed = newProgress >= goal;
+    // UPDATE XPPPPPPP
+    if (completed) {
+      List<Map<String, dynamic>> result = await db.query(
+        'users',
+        columns: ['xp_quest'],
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+
+      int currentXp = result.isNotEmpty ? result.first['xp_quest'] as int : 0;
+      int newXp = currentXp + (questData.first['xp'] as int);
+
+      await db.update(
+        'users',
+        {'xp_quest': newXp},
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+    }
 
     await db.update(
       'user_quests',
@@ -382,4 +405,93 @@ class DbHelper {
 
     return null;
   }
+
+  Future<void> broDidntMessUp(int questionId, String questionType, int userId) async {
+    Database db = await database;
+
+    List<Map<String, dynamic>> result = await db.query(
+      'users',
+      columns: ['xp_algebra', 'xp_geometry', 'xp_intalg', 'xp_trig'],
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+
+    if (questionType == "Algebra") {
+      int currentXp = result.isNotEmpty ? result.first['xp_algebra'] as int : 0;
+      int newXp = currentXp + 10;
+      await db.update(
+        'users',
+        {'xp_algebra': newXp},
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+    } else if (questionType == "Geometry") {
+      int currentXp = result.isNotEmpty ? result.first['xp_geometry'] as int : 0;
+      int newXp = currentXp + 10;
+      await db.update(
+        'users',
+        {'xp_geometry': newXp},
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+    } else if (questionType == "Intermediate Algebra") {
+      int currentXp = result.isNotEmpty ? result.first['xp_intalg'] as int : 0;
+      int newXp = currentXp + 10;
+      await db.update(
+        'users',
+        {'xp_intalg': newXp},
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+    } else {
+      int currentXp = result.isNotEmpty ? result.first['xp_trig'] as int : 0;
+      int newXp = currentXp + 10;
+      await db.update(
+        'users',
+        {'xp_trig': newXp},
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+    }
+  }
+  Future<Map<String, int>> getUserXp(int userId) async {
+    Database db = await database;
+
+    List<Map<String, dynamic>> result = await db.query(
+      'users',
+      columns: ['xp_tot', 'xp_algebra', 'xp_geometry', 'xp_intalg', 'xp_trig'],
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+
+    if (result.isNotEmpty) {
+      return {
+        'xp_tot': result.first['xp_tot'] as int,
+        'xp_algebra': result.first['xp_algebra'] as int,
+        'xp_geometry': result.first['xp_geometry'] as int,
+        'xp_intalg': result.first['xp_intalg'] as int,
+        'xp_trig': result.first['xp_trig'] as int,
+      };
+    }
+
+    return {
+      'xp_tot': 0,
+      'xp_algebra': 0,
+      'xp_geometry': 0,
+      'xp_intalg': 0,
+      'xp_trig': 0,
+    };
+  }
+  // ONE USER CAN LIKE INFINITE TIMES
+  Future<void> likeContent(int contentId, String contentType) async {
+    final db = await DbHelper.instance.database;
+
+    String tableName = contentType == 'post' ? 'posts' : 'comments';
+
+    await db.rawUpdate(
+      'UPDATE $tableName SET likes = likes + 1 WHERE id = ?',
+      [contentId],
+    );
+  }
+
 }

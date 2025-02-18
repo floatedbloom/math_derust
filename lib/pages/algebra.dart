@@ -14,7 +14,7 @@ class _AlgebraPageState extends State<AlgebraPage> {
   DbHelper db = DbHelper.instance;
   List<Map<String,dynamic>> questions = [];
 
-  List<Map<String,dynamic>> newProblems = [/*
+  List<Map<String,dynamic>> newProblems = [
     {
       'name': 'Problem 1',
       'category': 'Algebra',
@@ -54,7 +54,7 @@ class _AlgebraPageState extends State<AlgebraPage> {
       'content': 'Solve the following for x: 2/3 * x = 6',
       'answers': '4;2;9;3',
       'correct': '9',
-    },*/
+    },
   ];
 
   Future<void> _addProblems(List<Map<String,dynamic>> newProblems) async {
@@ -146,6 +146,8 @@ class _AlgebraPageState extends State<AlgebraPage> {
                         bool isCorrect = await db.checkAnswer(name, answer,'Algebra');
                         if (isCorrect) {
                           await db.updateUserQuestProgress(Session.instance.currentUserId ?? 0, 1, 1);
+                          int questionId = await db.getQuestionIdByNameAndCategory(name, 'Algebra') ?? 0;
+                          await db.broDidntMessUp(questionId, 'Algebra', Session.instance.currentUserId ?? 0);
                         }
                         print(answer);
                         print(isCorrect);

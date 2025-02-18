@@ -14,7 +14,7 @@ class _TrigPageState extends State<TrigPage> {
   DbHelper db = DbHelper.instance;
   List<Map<String,dynamic>> questions = [];
 
-  List<Map<String,dynamic>> newProblems = [/*
+  List<Map<String,dynamic>> newProblems = [
     {
       'name': 'Problem 1',
       'category': 'Trigonometry',
@@ -54,7 +54,7 @@ class _TrigPageState extends State<TrigPage> {
       'content': 'What is the period of f(x) = 3sin(2x)?',
       'answers': 'π;2π;π/2;3π',
       'correct': 'π',
-    },*/
+    },
   ];
 
   Future<void> _addProblems(List<Map<String,dynamic>> newProblems) async {
@@ -146,6 +146,8 @@ class _TrigPageState extends State<TrigPage> {
                         bool isCorrect = await db.checkAnswer(name, answer,'Trigonometry');
                         if (isCorrect) {
                           await db.updateUserQuestProgress(Session.instance.currentUserId ?? 0, 1, 1);
+                          int questionId = await db.getQuestionIdByNameAndCategory(name, 'Trigonometry') ?? 0;
+                          await db.broDidntMessUp(questionId, 'Trigonometry', Session.instance.currentUserId ?? 0);
                         }
                         print(answer);
                         print(isCorrect);

@@ -14,7 +14,7 @@ class _GeometryPageState extends State<GeometryPage> {
   DbHelper db = DbHelper.instance;
   List<Map<String,dynamic>> questions = [];
 
-  List<Map<String,dynamic>> newProblems = [/*
+  List<Map<String,dynamic>> newProblems = [
     {
       'name': 'Problem 1',
       'category': 'Geometry',
@@ -54,7 +54,7 @@ class _GeometryPageState extends State<GeometryPage> {
       'content': 'Which type of quadrilateral has exactly one pair of parallel sides?',
       'answers': 'Square;Rhombus;Trapezoid;Rectangle',
       'correct': 'Trapezoid',
-    },*/
+    },
   ];
 
   Future<void> _addProblems(List<Map<String,dynamic>> newProblems) async {
@@ -148,6 +148,8 @@ class _GeometryPageState extends State<GeometryPage> {
                         print(isCorrect);
                         if (isCorrect) {
                           await db.updateUserQuestProgress(Session.instance.currentUserId ?? 0, 1, 1);
+                          int questionId = await db.getQuestionIdByNameAndCategory(name, 'Geometry') ?? 0;
+                          await db.broDidntMessUp(questionId, 'Geometry', Session.instance.currentUserId ?? 0);
                         }
                         _showResultAnimation(isCorrect);
                       },

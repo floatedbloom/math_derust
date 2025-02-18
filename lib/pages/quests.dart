@@ -24,9 +24,7 @@ class QuestsState extends State<Quests> {
     await db.initializeQuests();
     List<Map<String, dynamic>> data = await db.getUserQuests(Session.instance.currentUserId ?? 0);
     setState(() {
-      for (Map<String, dynamic> elem in data) {
-        if (elem["completed"] > -1) quests.add(elem);
-      }
+      quests = data;
     });
   }
 
