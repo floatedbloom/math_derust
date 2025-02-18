@@ -23,16 +23,22 @@ class ProfileState extends State<Profile> {
     'xp_trig': 0,
   };
 
+  Map<String, int> friends = {
+    'No Friends Yet': 0,
+  };
+
   @override
   void initState() {
     super.initState();
-    loadUserXp();
+    loadUser();
   }
 
-  Future<void> loadUserXp() async {
+  Future<void> loadUser() async {
     Map<String, int> fetchedXp = await db.getUserXp(Session.instance.currentUserId ?? 0);
+    Map<String, int> fetchedFriends = await db.getUserFriends(Session.instance.currentUserId ?? 0);
     setState(() {
-      xps = fetchedXp;
+      if (fetchedXp.isNotEmpty) xps = fetchedXp;
+      if (fetchedFriends.isNotEmpty) friends = fetchedFriends;
     });
   }
 
@@ -291,12 +297,12 @@ class ProfileState extends State<Profile> {
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
-                        friendWidget("Friend 1", 100),
-                        friendWidget("Friend 2", 100),
-                        friendWidget("Friend 3", 100),
-                        friendWidget("Friend 4", 100),
-                        friendWidget("Friend 5", 100),
-                        friendWidget("Friend 6", 100),
+                        ListView.builder(
+                          itemCount: friends.length,
+                          itemBuilder: (context,index) {
+                            return friendWidget(friends.keys.elementAt(index), friends.values.elementAt(index));
+                          },
+                        )
                       ],
                     ),
                   )
@@ -366,7 +372,7 @@ class PieChartPainter extends CustomPainter {
     List<int> xpValues = [xpAlgebra, xpGeometry, xpIntAlg, xpTrig];
     int totalXp = xpValues.reduce((a, b) => a + b);
     
-    if (totalXp == 0) return; // Avoid division by zero
+    if (totalXp == 0) return;
 
     for (int i = 0; i < xpValues.length; i++) {
       paint.color = colors[i % colors.length];
@@ -384,7 +390,7 @@ class PieChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true; // Repaint if XP values change
+    return true;
   }
 }
 

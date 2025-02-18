@@ -494,4 +494,40 @@ class DbHelper {
     );
   }
 
+  Future<Map<String,int>> getUserFriends(int userId) async {
+    Database db = await database;
+
+    List<Map<String, dynamic>> result = await db.query(
+      'users',
+      columns: ['friends'],
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+
+    List<String> friendNames = [];
+    if (result.isNotEmpty) {
+      String friendsString = result.first['friends'] as String;
+      friendNames = friendsString.split(',');
+    }
+
+    List<List<Map<String, dynamic>>> ans = [];
+
+    for (String name in friendNames) {
+      ans.add(await db.query(
+        'users',
+        columns: ['xp'],
+        where: 'username=?',
+        whereArgs: [name]
+      ));
+
+    }
+    Map<String,int> friends = {};
+    if (ans.isNotEmpty) {
+      for (int i = 0; i < friendNames.length; i++) {
+        friends[friendNames[i]] = ans[i][0]['xp'];
+      }
+    }
+    return friends;
+  }
+
 }
