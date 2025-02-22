@@ -22,7 +22,7 @@ class MistakesState extends State<Mistakes> {
 
   Future<void> _loadMistakes() async {
     DbHelper db = DbHelper.instance;
-    List<Map<String, dynamic>> fetchedMistakes = await db.queryUserMistakes(Session.instance.currentUsername ?? 'User Not Found');
+    List<Map<String, dynamic>> fetchedMistakes = await db.queryUserMistakes(Session.instance.currentUserId ?? 0);
     setState(() {
       mistakes = fetchedMistakes;
     });

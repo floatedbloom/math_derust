@@ -26,6 +26,7 @@ class ProfileState extends State<Profile> {
   Map<String, int> friends = {
     'No Friends Yet': 0,
   };
+  final TextEditingController friendController = TextEditingController();
 
   @override
   void initState() {
@@ -66,6 +67,17 @@ class ProfileState extends State<Profile> {
       return result.first['streak'];
     }
     return null;
+  }
+
+  void _addFriend(TextEditingController friendName) async {
+    db.addFriend(Session.instance.currentUserId ?? 0, friendName.text);
+    await loadUser();
+    friendController.clear();
+  }
+
+  void _removeFriend(String friendName) async {
+    db.removeFriend(Session.instance.currentUserId ?? 0, friendName);
+    await loadUser();
   }
 
   @override
@@ -170,7 +182,7 @@ class ProfileState extends State<Profile> {
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState == ConnectionState.waiting) {
                                     return SizedBox(
-                                      height: 40, // Set a fixed height to prevent layout shift
+                                      height: 40,
                                       child: snapshot.connectionState == ConnectionState.waiting
                                         ? CircularProgressIndicator()
                                         : Text(snapshot.data?.toString() ?? "Error"),
@@ -282,22 +294,13 @@ class ProfileState extends State<Profile> {
                   ),
                 ),
                 const SizedBox(height: 30),
-                /*const Text(
-                  'F R I E N D S',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                    color: Colors.blueAccent,
-                  ),
-                ),
-                SizedBox(height: 10),*/
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 300),
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
                         ListView.builder(
+                          shrinkWrap: true,
                           itemCount: friends.length,
                           itemBuilder: (context,index) {
                             return friendWidget(friends.keys.elementAt(index), friends.values.elementAt(index));
@@ -306,10 +309,86 @@ class ProfileState extends State<Profile> {
                       ],
                     ),
                   )
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: 150),
+                      child: TextField(
+                        controller: friendController,
+                        decoration: InputDecoration(
+                          hintText: "Username",
+                          hintStyle: TextStyle(color: Colors.grey),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 20),
+                    ElevatedButton(
+                      onPressed: () => _addFriend(friendController), 
+                      child: Row(
+                        children: [
+                          Text(
+                            "Add A Friend  ",
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromARGB(255, 120, 120, 120),
+                          ),),
+                          Icon(
+                            Icons.handshake_rounded,
+                          ),
+                        ],
+                      )
+                    ),
+                  ],
                 )
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+  Widget friendWidget(String username, int xp) {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      elevation: 5,
+      child: Padding(
+        padding: const EdgeInsets.all(15.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  username,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  '$xp XP',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            IconButton(
+              onPressed: () => _removeFriend(username), 
+              icon: Icon(Icons.person_remove_alt_1_rounded)
+            )
+          ],
         ),
       ),
     );
@@ -392,42 +471,4 @@ class PieChartPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return true;
   }
-}
-
-Widget friendWidget(String username, int xp) {
-  return Card(
-    margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(15),
-    ),
-    elevation: 5,
-    child: Padding(
-      padding: const EdgeInsets.all(15.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                username,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 5),
-              Text(
-                '$xp XP',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
 }

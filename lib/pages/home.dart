@@ -22,6 +22,9 @@ class HomeState extends State<Home> {
   final PageController _pageController = PageController(initialPage: 2);
   DbHelper db = DbHelper.instance;
 
+  int questNum = 0;
+  int mistakesNum = 0;
+
   static const List<Widget> _pages = [
     Quests(),
     Community(),
@@ -56,17 +59,21 @@ class HomeState extends State<Home> {
     );
   }
 
-  Future<int?> getStreak() async {
-    List<Map<String, dynamic>> result = await db.queryWhere(
-      'users',
-      'username = ?',
-      [Session.instance.currentUsername],
-    );
+  Future<void> getUserVals() async {
+    List<Map<String, dynamic>> res1 = await db.getUserQuests(Session.instance.currentUserId ?? 0);
+    questNum = (res1.isEmpty) ? 0 : res1.length;
+    List<Map<String, dynamic>> res2 = await db.queryUserMistakes(Session.instance.currentUserId ?? 0);
+    mistakesNum = (res2.isEmpty) ? 0 : res2.length;
+  }
 
-    if (result.isNotEmpty) {
-      return result.first['streak'];
-    }
-    return null;
+  void awaitVals() async {
+    await getUserVals();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    awaitVals();
   }
 
   @override
@@ -112,22 +119,24 @@ class HomeState extends State<Home> {
           ),
           child: BottomNavigationBar(
             type: BottomNavigationBarType.fixed,
-            items: const <BottomNavigationBarItem>[
+            items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
                 icon: badges.Badge(
-                  badgeContent: Text('3', style: TextStyle(color: Color.fromARGB(255, 160, 15, 15))),
-                  child: Icon(Icons.brightness_7_sharp),), 
+                  showBadge: questNum > 0,
+                  badgeContent: questNum > 0
+                    ? Text('$questNum', style: TextStyle(color: Color.fromARGB(255, 160, 15, 15)))
+                    : null,
+                  child: Icon(Icons.brightness_7_sharp)),
                 label: "Quests"),
-              BottomNavigationBarItem(
-                icon: badges.Badge(
-                  badgeContent: Text('3', style: TextStyle(color: Color.fromRGBO(160, 15, 15, 1))),
-                  child: Icon(Icons.diversity_3_rounded),), 
-                label: "Community"),
+              BottomNavigationBarItem(icon: Icon(Icons.diversity_3_rounded), label: "Community"),
               BottomNavigationBarItem(icon: Icon(Icons.emoji_emotions_rounded), label: "Profile"),
               BottomNavigationBarItem(icon: Icon(Icons.local_library_rounded), label: "Learn"),
               BottomNavigationBarItem(
                 icon: badges.Badge(
-                  badgeContent: Text('3', style: TextStyle(color: Color.fromARGB(255, 160, 15, 15))),
+                  showBadge: mistakesNum > 0,
+                  badgeContent: mistakesNum > 0
+                  ? Text('$mistakesNum', style: TextStyle(color: Color.fromARGB(255, 160, 15, 15)))
+                  : null,
                   child: Icon(Icons.redo_rounded),), 
                 label: "Mistakes"),
             ],

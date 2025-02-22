@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -160,10 +162,9 @@ class DbHelper {
   }
 
   //get all mistakes
-  Future<List<Map<String, dynamic>>> queryUserMistakes(String username) async {
+  Future<List<Map<String, dynamic>>> queryUserMistakes(int userId) async {
     Database db = await database;
-    List<Map<String,dynamic>> result = await db.query('users', where: 'username=?', whereArgs: [username]);
-    int user_id = result.first['id'];
+    int user_id = userId;
     List<Map<String,dynamic>> mistakes =  await db.query('mistakes', where: 'user_id = ?', whereArgs: [user_id]);
     List<Map<String,dynamic>> questions = [];
     for (Map<String, dynamic> mistake in mistakes) {
@@ -504,6 +505,8 @@ class DbHelper {
       whereArgs: [userId],
     );
 
+     if (result.isEmpty || result.first['friends'] == null || result.first['friends'].toString().trim().isEmpty) return {};
+
     List<String> friendNames = [];
     if (result.isNotEmpty) {
       String friendsString = result.first['friends'] as String;
@@ -515,7 +518,7 @@ class DbHelper {
     for (String name in friendNames) {
       ans.add(await db.query(
         'users',
-        columns: ['xp'],
+        columns: ['xp_tot'],
         where: 'username=?',
         whereArgs: [name]
       ));
@@ -524,10 +527,52 @@ class DbHelper {
     Map<String,int> friends = {};
     if (ans.isNotEmpty) {
       for (int i = 0; i < friendNames.length; i++) {
-        friends[friendNames[i]] = ans[i][0]['xp'];
+        if (ans[i].isNotEmpty && ans[i][0]['xp_tot'] != null) {
+          friends[friendNames[i]] = ans[i][0]['xp_tot'] as int;
+        } else {
+          friends[friendNames[i]] = 0;
+        }
       }
     }
     return friends;
+  }
+
+  Future<void> addFriend(int userId, String friendName) async{
+    Database db = await database;
+
+    List<Map<String, Object?>> res = await db.query('users', columns: ['friends'], where: 'id=?', whereArgs: [userId]);
+    String newFriends;
+    if (res.isNotEmpty) {
+      String currFriends = res.first['friends'] as String;
+      newFriends = currFriends.isEmpty ? friendName : "$currFriends,$friendName";
+    } else {
+      newFriends = friendName;
+    }
+    await db.update(
+        'users',
+        {'friends': newFriends},
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+  }
+
+  Future<void> removeFriend(int userId, String friendName) async {
+    Database db = await database;
+
+    List<Map<String,Object?>> res = await db.query(
+      'users',
+      columns: ['friends'],
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+
+    String newFriends = (res.first["friends"] as String).replaceAll(RegExp(r'(^|,)' + RegExp.escape(friendName) + r'(?=,|$)'), '').replaceAll(RegExp(r'^,|,$'), '');;
+    await db.update(
+      'users',
+      {'friends': newFriends},
+      where: 'id=?',
+      whereArgs: [userId]
+    );
   }
 
 }

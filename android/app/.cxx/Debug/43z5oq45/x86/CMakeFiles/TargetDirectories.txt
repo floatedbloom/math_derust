@@ -1,0 +1,2 @@
+F:/CodingProjects/math_derust/android/app/.cxx/Debug/43z5oq45/x86/CMakeFiles/edit_cache.dir
+F:/CodingProjects/math_derust/android/app/.cxx/Debug/43z5oq45/x86/CMakeFiles/rebuild_cache.dir

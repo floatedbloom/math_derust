@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:math_derust/data/db.dart';
 import 'package:math_derust/pages/login.dart';
+import 'package:sqflite/sqflite.dart';
 
 class CreateAccount extends StatefulWidget {
   const CreateAccount({super.key});
@@ -43,10 +44,18 @@ class _CreateAccountState extends State<CreateAccount> {
         'class': clas,
       };      
       //put into db
-      await DbHelper.instance.insert('users', userMap);
-
+      try {
+        await DbHelper.instance.insert('users', userMap);
+      }  on DatabaseException catch (e) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          const SnackBar(content: Text('Name or email is taken'))
+        );
+      }
       //send to login screen
       if (mounted) {
+        ScaffoldMessenger.of(currentContext).showSnackBar(
+          const SnackBar(content: Text('Account Creation Successful!'))
+        );
         Navigator.of(currentContext).push(
           MaterialPageRoute(
             builder: (context) => const Login()
