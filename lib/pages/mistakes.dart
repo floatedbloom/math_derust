@@ -56,7 +56,8 @@ class MistakesState extends State<Mistakes> {
                           await db.updateUserQuestProgress(Session.instance.currentUserId ?? 0, 3, 1);
                           await _loadMistakes();
                         }
-                        _showResultAnimation(isCorrect);
+                        await _showResultAnimation(isCorrect);
+                        Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color.fromARGB(255, 27, 50, 56),
@@ -80,26 +81,32 @@ class MistakesState extends State<Mistakes> {
     );
   }
 
-  void _showResultAnimation(bool isCorrect) {
+  Future<void> _showResultAnimation(bool isCorrect) async {
+    late BuildContext dialogContext; 
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        content: Container(
-          width: 150,
-          height: 150,
-          child: RiveAnimation.asset(
-            isCorrect ? 'assets/checkmark_icon.riv' : 'assets/error_icon.riv',
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        dialogContext = ctx;
+        return AlertDialog(
+          backgroundColor: Color.fromARGB(255,18,18,18),
+          content: SizedBox(
+            width: 400,
+            height: 400,
+            child: RiveAnimation.asset(
+              isCorrect ? 'assets/checkmark_icon.riv' : 'assets/error_icon.riv',
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
-    // Close the animation dialog after 1.5 seconds
-    Future.delayed(Duration(milliseconds: 1500), () {
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-    });
+    await Future.delayed(Duration(milliseconds: 1500));
+
+    if (Navigator.canPop(dialogContext)) {
+      Navigator.pop(dialogContext);
+    }
   }
 
   @override

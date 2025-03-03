@@ -60,6 +60,7 @@ class DbHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         category TEXT NOT NULL,
+        topic INTEGER NOT NULL,
         difficulty INTEGER NOT NULL,
         content TEXT NOT NULL,
         answers TEXT NOT NULL,
