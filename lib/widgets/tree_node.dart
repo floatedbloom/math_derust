@@ -3,11 +3,12 @@ import 'package:math_derust/widgets/lesson.dart';
 import 'package:math_derust/widgets/question.dart';
 
 class TreeNode extends StatelessWidget {
-  final LessonWidget lesson;
+  final String topic;
+  //final LessonWidget lesson;
   final String text;
   final List<TreeNode> children;
 
-  const TreeNode({super.key,required this.lesson, required this.text, this.children = const []});
+  const TreeNode({super.key,required this.topic, required this.text, this.children = const []});
 
   @override
   Widget build(BuildContext context) {

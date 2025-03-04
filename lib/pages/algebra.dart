@@ -67,13 +67,13 @@ class _AlgebraPageState extends State<AlgebraPage> {
           child: ListView.builder(
             itemCount: questions.length,
             itemBuilder: (context,index) {
-              return QuestionWidget(
-                topic: 'Algebra',
+              return Placeholder(
+                /*topic: 'Algebra',
                 name: questions[index]['name'], 
                 difficulty: questions[index]['difficulty'], 
                 content: questions[index]['content'], 
                 answers: questions[index]['answers'],
-                db: db
+                db: db*/
               );
             },
           ),

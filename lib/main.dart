@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'pages/home.dart';
 import 'pages/login.dart';
 import 'session.dart';
-import 'data/db.dart';
+//import 'data/db.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await DbHelper.instance.deleteDatabaseFile();
+  //await DbHelper.instance.deleteDatabaseFile();
   runApp(const MainApp());
 }
 

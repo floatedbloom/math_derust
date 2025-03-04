@@ -575,5 +575,19 @@ class DbHelper {
       whereArgs: [userId]
     );
   }
+  
+  Future<bool> checkExistence(String username) async {
+    Database db = await database;
+
+    username = username.trim();
+
+    List<Map<String,Object?>> res = await db.query(
+      'users',
+      columns: ['id'],
+      where: 'username = ?',
+      whereArgs: [username],
+    );
+    return res.isNotEmpty;
+  }
 
 }

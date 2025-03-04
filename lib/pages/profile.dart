@@ -23,9 +23,7 @@ class ProfileState extends State<Profile> {
     'xp_trig': 0,
   };
 
-  Map<String, int> friends = {
-    'No Friends Yet': 0,
-  };
+  Map<String, int> friends = {};
   final TextEditingController friendController = TextEditingController();
 
   @override
@@ -37,9 +35,10 @@ class ProfileState extends State<Profile> {
   Future<void> loadUser() async {
     Map<String, int> fetchedXp = await db.getUserXp(Session.instance.currentUserId ?? 0);
     Map<String, int> fetchedFriends = await db.getUserFriends(Session.instance.currentUserId ?? 0);
+    print(fetchedFriends);
     setState(() {
-      if (fetchedXp.isNotEmpty) xps = fetchedXp;
-      if (fetchedFriends.isNotEmpty) friends = fetchedFriends;
+      xps = fetchedXp;
+      friends = fetchedFriends;
     });
   }
 
@@ -70,281 +69,303 @@ class ProfileState extends State<Profile> {
   }
 
   void _addFriend(TextEditingController friendName) async {
-    db.addFriend(Session.instance.currentUserId ?? 0, friendName.text);
-    await loadUser();
+    bool res = await db.checkExistence(friendName.text);
+    bool exists = res && friendName.text.trim() != Session.instance.currentUsername?.trim();
+    if (exists) {
+      db.addFriend(Session.instance.currentUserId ?? 0, friendName.text);
+      await loadUser();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Username doesn't exist or is already you friend"))
+        );
+    }
     friendController.clear();
+    FocusScope.of(context).unfocus();
   }
 
   void _removeFriend(String friendName) async {
-    db.removeFriend(Session.instance.currentUserId ?? 0, friendName);
+    await db.removeFriend(Session.instance.currentUserId ?? 0, friendName);
     await loadUser();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          child: SizedBox(
-            height: 800,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                const SizedBox(height: 0),
-                Text("P R O F I L E", style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(2.0, 2.0),
-                        blurRadius: 4.0,
-                        color: Color.fromRGBO(0, 0, 0, 0.3),
-                      )
-                    ]
-                  ),
-                ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    Session.instance.currentUsername as String,
-                    style: TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.w500,
-                      color: Color.fromARGB(255, 120, 120, 120),
+    return GestureDetector(
+      onTap: () {FocusManager.instance.primaryFocus?.unfocus();},
+      child: Scaffold(
+        body: Center(
+          child: SingleChildScrollView(
+            child: SizedBox(
+              height: 800,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  const SizedBox(height: 0),
+                  Text("P R O F I L E", style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueAccent,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(2.0, 2.0),
+                          blurRadius: 4.0,
+                          color: Color.fromRGBO(0, 0, 0, 0.3),
+                        )
+                      ]
                     ),
                   ),
-                ),
-                FutureBuilder<String?>(
-                  future: getClassValue(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return CircularProgressIndicator();
-                    } else if (snapshot.hasError) {
-                      return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Text('Error loading class'));
-                    } else if (!snapshot.hasData || snapshot.data == null) {
-                      return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Center(child: Text('CLASS NOT SET',style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: const Color.fromARGB(255, 163, 4, 4),
-                          shadows: [
-                            Shadow(
-                              offset: Offset(2.0, 2.0),
-                              blurRadius: 4.0,
-                              color: Color.fromRGBO(0, 0, 0, 0.3),
-                            )
-                          ]
-                        ),)));
-                    } else {
-                      return FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          "(${snapshot.data!})",
-                          style: TextStyle(
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      Session.instance.currentUsername as String,
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w500,
+                        color: Color.fromARGB(255, 120, 120, 120),
+                      ),
+                    ),
+                  ),
+                  FutureBuilder<String?>(
+                    future: getClassValue(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return CircularProgressIndicator();
+                      } else if (snapshot.hasError) {
+                        return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Text('Error loading class'));
+                      } else if (!snapshot.hasData || snapshot.data == null) {
+                        return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Center(child: Text('CLASS NOT SET',style: TextStyle(
                             fontSize: 20,
-                            fontWeight: FontWeight.w500,
-                            color: Color.fromARGB(255, 120, 120, 120),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  height: 250,
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 20.0,
-                    crossAxisSpacing: 20.0,
-                    padding: const EdgeInsets.all(20.0),
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 95, 88, 88),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withAlpha((0.3 * 255).toInt()),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
+                            fontWeight: FontWeight.bold,
+                            color: const Color.fromARGB(255, 163, 4, 4),
+                            shadows: [
+                              Shadow(
+                                offset: Offset(2.0, 2.0),
+                                blurRadius: 4.0,
+                                color: Color.fromRGBO(0, 0, 0, 0.3),
+                              )
+                            ]
+                          ),)));
+                      } else {
+                        return FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "(${snapshot.data!})",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
+                              color: Color.fromARGB(255, 120, 120, 120),
                             ),
-                          ],
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 250,
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 20.0,
+                      crossAxisSpacing: 20.0,
+                      padding: const EdgeInsets.all(20.0),
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 95, 88, 88),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withAlpha((0.3 * 255).toInt()),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                FutureBuilder<int?>(
+                                  future: getStreak(),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState == ConnectionState.waiting) {
+                                      return SizedBox(
+                                        height: 40,
+                                        child: snapshot.connectionState == ConnectionState.waiting
+                                          ? CircularProgressIndicator()
+                                          : Text(snapshot.data?.toString() ?? "Error"),
+                                      );
+                                    } else if (snapshot.hasError) {
+                                      return Text('Error loading Streak');
+                                    } else if (!snapshot.hasData || snapshot.data == null) {
+                                      return Text('E R R O R',style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color.fromARGB(255, 163, 4, 4),
+                                          shadows: [
+                                            Shadow(
+                                              offset: Offset(2.0, 2.0),
+                                              blurRadius: 4.0,
+                                              color: Color.fromRGBO(0, 0, 0, 0.3),
+                                            )
+                                          ]
+                                        ),);
+                                    } else {
+                                      return Text(
+                                        snapshot.data!.toString(),
+                                        style: TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blueAccent,
+                                          shadows: [
+                                            Shadow(
+                                              offset: Offset(2.0, 2.0),
+                                              blurRadius: 4.0,
+                                              color: Color.fromRGBO(0, 0, 0, 0.3),
+                                            )
+                                          ]
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  "🔥",
+                                  style: TextStyle(fontSize: 44),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Day Streak",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blueAccent,
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(2.0, 2.0),
+                                        blurRadius: 4.0,
+                                        color: Color.fromRGBO(0, 0, 0, 0.3),
+                                      )
+                                    ]
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
                         ),
-                        padding: const EdgeInsets.all(16),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                        Center(
+                          child: Stack(
+                            alignment: Alignment.center,
                             children: [
-                              FutureBuilder<int?>(
-                                future: getStreak(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return SizedBox(
-                                      height: 40,
-                                      child: snapshot.connectionState == ConnectionState.waiting
-                                        ? CircularProgressIndicator()
-                                        : Text(snapshot.data?.toString() ?? "Error"),
-                                    );
-                                  } else if (snapshot.hasError) {
-                                    return Text('Error loading Streak');
-                                  } else if (!snapshot.hasData || snapshot.data == null) {
-                                    return Text('E R R O R',style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color.fromARGB(255, 163, 4, 4),
-                                        shadows: [
-                                          Shadow(
-                                            offset: Offset(2.0, 2.0),
-                                            blurRadius: 4.0,
-                                            color: Color.fromRGBO(0, 0, 0, 0.3),
-                                          )
-                                        ]
-                                      ),);
-                                  } else {
-                                    return Text(
-                                      snapshot.data!.toString(),
-                                      style: TextStyle(
-                                        fontSize: 30,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.blueAccent,
-                                        shadows: [
-                                          Shadow(
-                                            offset: Offset(2.0, 2.0),
-                                            blurRadius: 4.0,
-                                            color: Color.fromRGBO(0, 0, 0, 0.3),
-                                          )
-                                        ]
+                              ClipRect(
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                                  child: ClipOval(
+                                    child: ColorFiltered(
+                                      colorFilter: ColorFilter.mode(
+                                        Color.fromRGBO(0, 0, 0, 0.3),
+                                        BlendMode.darken,
                                       ),
-                                    );
-                                  }
-                                },
+                                      child: PieChartWidget(
+                                        xpAlgebra: xps['xp_algebra'] ?? 0,
+                                        xpGeometry: xps['xp_geometry'] ?? 0,
+                                        xpIntAlg: xps['xp_intalg'] ?? 0,
+                                        xpTrig: xps['xp_trig'] ?? 0
+                                      )
+                                    ),
+                                  )
+                                ),
                               ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                "🔥",
-                                style: TextStyle(fontSize: 44),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Day Streak",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blueAccent,
-                                  shadows: [
-                                    Shadow(
-                                      offset: Offset(2.0, 2.0),
-                                      blurRadius: 4.0,
-                                      color: Color.fromRGBO(0, 0, 0, 0.3),
-                                    )
-                                  ]
+                              Center(
+                                child: Text(
+                                  "${xps['xp_tot']} XP",
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blueAccent,
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(2.0, 2.0),
+                                        blurRadius: 4.0,
+                                        color: Color.fromRGBO(0, 0, 0, 0.5),
+                                      )
+                                    ]
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ],
                           ),
                         )
-                      ),
-                      Center(
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            ClipRect(
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-                                child: ClipOval(
-                                  child: ColorFiltered(
-                                    colorFilter: ColorFilter.mode(
-                                      Color.fromRGBO(0, 0, 0, 0.3),
-                                      BlendMode.darken,
-                                    ),
-                                    child: PieChartWidget(
-                                      xpAlgebra: xps['xp_algebra'] ?? 0,
-                                      xpGeometry: xps['xp_geometry'] ?? 0,
-                                      xpIntAlg: xps['xp_intalg'] ?? 0,
-                                      xpTrig: xps['xp_trig'] ?? 0
-                                    )
-                                  ),
-                                )
-                              ),
-                            ),
-                            Center(
-                              child: Text(
-                                "${xps['xp_tot']} XP",
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blueAccent,
-                                  shadows: [
-                                    Shadow(
-                                      offset: Offset(2.0, 2.0),
-                                      blurRadius: 4.0,
-                                      color: Color.fromRGBO(0, 0, 0, 0.5),
-                                    )
-                                  ]
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 30),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 300),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: friends.length,
-                          itemBuilder: (context,index) {
-                            return friendWidget(friends.keys.elementAt(index), friends.values.elementAt(index));
-                          },
-                        )
                       ],
                     ),
-                  )
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: 150),
-                      child: TextField(
-                        controller: friendController,
-                        decoration: InputDecoration(
-                          hintText: "Username",
-                          hintStyle: TextStyle(color: Colors.grey),
-                          border: OutlineInputBorder(),
+                  ),
+                  const SizedBox(height: 30),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 300),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          friends.isEmpty
+                          ? Padding(
+                            padding: const EdgeInsets.only(bottom: 20.0),
+                            child: Text("No Friends Yet", 
+                            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 20)
+                            ),
+                          )
+                          : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: friends.length,
+                            itemBuilder: (context,index) {
+                              return friendWidget(friends.keys.elementAt(index), friends.values.elementAt(index));
+                            },
+                          )
+                        ],
+                      ),
+                    )
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: 150),
+                        child: TextField(
+                          controller: friendController,
+                          decoration: InputDecoration(
+                            fillColor: Color.fromARGB(71, 197, 197, 255),
+                            hintText: "     Username",
+                            hintStyle: TextStyle(color: Colors.grey),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    SizedBox(width: 20),
-                    ElevatedButton(
-                      onPressed: () => _addFriend(friendController), 
-                      child: Row(
-                        children: [
-                          Text(
-                            "Add A Friend  ",
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Color.fromARGB(255, 120, 120, 120),
-                          ),),
-                          Icon(
-                            Icons.handshake_rounded,
-                          ),
-                        ],
-                      )
-                    ),
-                  ],
-                )
-              ],
+                      SizedBox(width: 20),
+                      ElevatedButton(
+                        onPressed: () => _addFriend(friendController), 
+                        child: Row(
+                          children: [
+                            Text(
+                              "Add A Friend  ",
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color.fromARGB(255, 120, 120, 120),
+                            ),),
+                            Icon(
+                              Icons.handshake_rounded,
+                            ),
+                          ],
+                        )
+                      ),
+                    ],
+                  )
+                ],
+              ),
             ),
           ),
         ),

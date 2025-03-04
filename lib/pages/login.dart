@@ -84,6 +84,7 @@ class _LoginState extends State<Login> {
                   //password field
                   TextField(
                     controller: _passwordController,
+                    obscureText: true,
                     decoration: const InputDecoration(labelText: 'P A S S W O R D'),
                   ),
                   const SizedBox(height: 20),
