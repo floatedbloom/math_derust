@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:math_derust/data/db.dart';
 import 'package:math_derust/widgets/lesson.dart';
-import 'package:math_derust/widgets/question.dart';
 
 class TreeNode extends StatelessWidget {
   final String topic;
-  //final LessonWidget lesson;
-  final String text;
   final List<TreeNode> children;
+  final List<Map<String,dynamic>> questions;
+  final DbHelper db;
 
-  const TreeNode({super.key,required this.topic, required this.text, this.children = const []});
+  const TreeNode({super.key,required this.topic, this.children = const [], this.questions = const [], required this.db});
 
   @override
   Widget build(BuildContext context) {
@@ -16,15 +16,27 @@ class TreeNode extends StatelessWidget {
       children: [
         ElevatedButton(
           onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("$text clicked")),
-            );
+            if (children.isEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => LessonWidget(
+                    questions: questions,
+                    db: db
+                  )
+                )
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Hi"))
+              );
+            }
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blueGrey[800],
             foregroundColor: Colors.white,
           ),
-          child: Text(text),
+          child: Text(topic),
         ),
         if (children.isNotEmpty)
           Row(

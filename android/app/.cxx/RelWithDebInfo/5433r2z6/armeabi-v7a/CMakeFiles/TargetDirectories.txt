@@ -1,0 +1,2 @@
+F:/CodingProjects/Current/math_derust/android/app/.cxx/RelWithDebInfo/5433r2z6/armeabi-v7a/CMakeFiles/edit_cache.dir
+F:/CodingProjects/Current/math_derust/android/app/.cxx/RelWithDebInfo/5433r2z6/armeabi-v7a/CMakeFiles/rebuild_cache.dir

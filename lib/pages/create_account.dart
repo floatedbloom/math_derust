@@ -69,27 +69,76 @@ class _CreateAccountState extends State<CreateAccount> {
   Widget build(BuildContext context) {
     return Center(
       child: Scaffold(
-        appBar: AppBar(title: const Text('C R E A T E   A C C O U N T'), automaticallyImplyLeading: false, centerTitle: true,),
+        appBar: AppBar(
+            automaticallyImplyLeading: false,
+            title: const Center(child: Text('Create Account', style: TextStyle(
+              fontSize: 44,
+              fontWeight: FontWeight.bold,
+              color: Color.fromARGB(255, 173, 151, 103),
+              shadows: [
+                Shadow(
+                  offset: Offset(2, 2),
+                  blurRadius: 1,
+                  color: Colors.grey,
+                ),
+              ],),
+            )),
+            elevation: 0,
+            scrolledUnderElevation: 0.0,
+            backgroundColor: Color(0xFF121212),
+          ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
               TextField(
                 controller: _usernameController,
-                decoration: const InputDecoration(labelText: 'U S E R N A M E'),
+                decoration: const InputDecoration(
+                  label: Align(
+                    alignment: Alignment.center, // Centers the label
+                    child: Text(
+                      'U S E R N A M E',
+                      textAlign: TextAlign.center, // Ensures text within label is centered
+                    ),
+                  ),
+                ),
               ),
               TextField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'E M A I L'),
+                decoration: const InputDecoration(
+                  label: Align(
+                    alignment: Alignment.center, // Centers the label
+                    child: Text(
+                      'E M A I L',
+                      textAlign: TextAlign.center, // Ensures text within label is centered
+                    ),
+                  ),
+                ),
               ),
               TextField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'P A S S W O R D'),
+                decoration: const InputDecoration(
+                  label: Align(
+                    alignment: Alignment.center, // Centers the label
+                    child: Text(
+                      'P A S S W O R D',
+                      textAlign: TextAlign.center, // Ensures text within label is centered
+                    ),
+                  ),
+                ),
                 obscureText: true,
               ),
               TextField(
                 controller: _confirmController,
-                decoration: const InputDecoration(labelText: 'C O N F I R M   P A S S W O R D'),
+                decoration: const InputDecoration(
+                  label: Align(
+                    alignment: Alignment.center, // Centers the label
+                    child: Text(
+                      'C O N F I R M   P A S S W O R D',
+                      textAlign: TextAlign.center, // Ensures text within label is centered
+                    ),
+                  ),
+                ),
                 obscureText: true,
               ),
               const SizedBox(height:15),

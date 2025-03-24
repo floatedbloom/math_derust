@@ -272,7 +272,7 @@ class DbHelper {
 
     List<Map<String, dynamic>> quests = [
       {"name": "Finish 10 Lessons", "condition": "Complete 10 lessons", "xp": 50, "goal": 10},
-      {"name": "Do 2 Mastery Challenges", "condition": "Complete 2 mastery challenges", "xp": 100, "goal": 2},
+      //{"name": "Do 2 Mastery Challenges", "condition": "Complete 2 mastery challenges", "xp": 100, "goal": 2},
       {"name": "Fix 10 Mistakes", "condition": "Correct 10 incorrect answers", "xp": 20, "goal": 10},
       {"name": "Earn 500 XP", "condition": "Gain a total of 500 XP", "xp": 200, "goal": 500},
     ];

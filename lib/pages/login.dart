@@ -78,14 +78,32 @@ class _LoginState extends State<Login> {
                   //username field
                   TextField(
                     controller: _usernameController,
-                    decoration: const InputDecoration(labelText: 'U S E R N A M E'),
+                    textAlign: TextAlign.center, // Centers the input text
+                    decoration: const InputDecoration(
+                      label: Align(
+                        alignment: Alignment.center, // Centers the label
+                        child: Text(
+                          'U S E R N A M E',
+                          textAlign: TextAlign.center, // Ensures text within label is centered
+                        ),
+                      ),
+                    ),
                   ),
                   SizedBox(height: 30),
                   //password field
                   TextField(
                     controller: _passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'P A S S W O R D'),
+                    textAlign: TextAlign.center, // Centers the input text
+                    decoration: const InputDecoration(
+                      label: Align(
+                        alignment: Alignment.center, // Centers the label
+                        child: Text(
+                          'P A S S W O R D',
+                          textAlign: TextAlign.center, // Ensures text within label is centered
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
@@ -112,7 +130,7 @@ class _LoginState extends State<Login> {
                   ),
                   const SizedBox(height:500),
                   const Text(
-                      'B Y   G E O R G I Y   L A P I N', 
+                      'S U P P O R T :  \$GeorgiyLapin', 
                       style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
                   ),
                 ],

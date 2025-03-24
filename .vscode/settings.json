@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "F:/math_derust/math_derust/linux"
+    "cmake.sourceDirectory": "F:/math_derust/math_derust/linux",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
