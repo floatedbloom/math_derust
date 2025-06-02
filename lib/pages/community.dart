@@ -183,27 +183,40 @@ class CommunityState extends State<Community> {
             const SizedBox(height: 10),
             Expanded(
               child: posts.isEmpty
-                ? Center(child: CircularProgressIndicator())
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.forum_outlined, size: 60, color: Colors.grey),
+                        SizedBox(height: 20),
+                        Text(
+                          "No community posts yet!",
+                          style: TextStyle(fontSize: 20, color: Colors.grey, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
-                itemCount: posts.length,
-                itemBuilder: (context, index) {
-                  return FutureBuilder<String>(
-                    future: db.getUsernameById(posts[index]["creator_id"]),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return Center(child: CircularProgressIndicator());
-                      }
-                      return communityPost(
-                        snapshot.data ?? "Unknown User",
-                        posts[index]["title"] ?? "No Title",
-                        posts[index]["content"] ?? "",
-                        posts[index]["likes"] ?? 0,
-                        posts[index]["id"] ?? 0,
+                    itemCount: posts.length,
+                    itemBuilder: (context, index) {
+                      return FutureBuilder<String>(
+                        future: db.getUsernameById(posts[index]["creator_id"]),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return Center(child: CircularProgressIndicator());
+                          }
+                          return communityPost(
+                            snapshot.data ?? "Unknown User",
+                            posts[index]["title"] ?? "No Title",
+                            posts[index]["content"] ?? "",
+                            posts[index]["likes"] ?? 0,
+                            posts[index]["id"] ?? 0,
+                          );
+                        },
                       );
                     },
-                  );
-                },
-              ),
+                  ),
             )
           ],
         ),

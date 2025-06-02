@@ -18,19 +18,19 @@ class Home extends StatefulWidget {
 }
 
 class HomeState extends State<Home> {
-  int _selectedIndex = 2;
-  final PageController _pageController = PageController(initialPage: 2);
+  int _selectedIndex = 0;
+  final PageController _pageController = PageController(initialPage: 0);
   DbHelper db = DbHelper.instance;
 
   int questNum = 0;
   int mistakesNum = 0;
 
   static const List<Widget> _pages = [
-    Quests(),
-    Community(),
+    //Community(),
     Profile(),
     Learn(),
     Mistakes(),
+    Quests(),
   ];
 
   void _onElementTap(int index) {
@@ -124,15 +124,7 @@ class HomeState extends State<Home> {
             child: BottomNavigationBar(
               type: BottomNavigationBarType.fixed,
               items: <BottomNavigationBarItem>[
-                BottomNavigationBarItem(
-                  icon: badges.Badge(
-                    showBadge: questNum > 0,
-                    badgeContent: questNum > 0
-                      ? Text('$questNum', style: TextStyle(color: Color.fromARGB(255, 160, 15, 15)))
-                      : null,
-                    child: Icon(Icons.brightness_7_sharp)),
-                  label: "Quests"),
-                BottomNavigationBarItem(icon: Icon(Icons.diversity_3_rounded), label: "Community"),
+                //BottomNavigationBarItem(icon: Icon(Icons.diversity_3_rounded), label: "Community"),
                 BottomNavigationBarItem(icon: Icon(Icons.emoji_emotions_rounded), label: "Profile"),
                 BottomNavigationBarItem(icon: Icon(Icons.local_library_rounded), label: "Learn"),
                 BottomNavigationBarItem(
@@ -143,6 +135,14 @@ class HomeState extends State<Home> {
                     : null,
                     child: Icon(Icons.redo_rounded),), 
                   label: "Mistakes"),
+                  BottomNavigationBarItem(
+                  icon: badges.Badge(
+                    showBadge: questNum > 0,
+                    badgeContent: questNum > 0
+                      ? Text('$questNum', style: TextStyle(color: Color.fromARGB(255, 160, 15, 15)))
+                      : null,
+                    child: Icon(Icons.brightness_7_sharp)),
+                  label: "Quests"),
               ],
               currentIndex: _selectedIndex,
               selectedItemColor: Colors.indigoAccent,

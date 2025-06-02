@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
@@ -165,8 +166,7 @@ class DbHelper {
   //get all mistakes
   Future<List<Map<String, dynamic>>> queryUserMistakes(int userId) async {
     Database db = await database;
-    int user_id = userId;
-    List<Map<String,dynamic>> mistakes =  await db.query('mistakes', where: 'user_id = ?', whereArgs: [user_id]);
+    List<Map<String,dynamic>> mistakes =  await db.query('mistakes', where: 'user_id = ?', whereArgs: [userId]);
     List<Map<String,dynamic>> questions = [];
     for (Map<String, dynamic> mistake in mistakes) {
       int questionId = mistake['question_id'];
@@ -567,7 +567,7 @@ class DbHelper {
       whereArgs: [userId],
     );
 
-    String newFriends = (res.first["friends"] as String).replaceAll(RegExp(r'(^|,)' + RegExp.escape(friendName) + r'(?=,|$)'), '').replaceAll(RegExp(r'^,|,$'), '');;
+    String newFriends = (res.first["friends"] as String).replaceAll(RegExp(r'(^|,)' + RegExp.escape(friendName) + r'(?=,|$)'), '').replaceAll(RegExp(r'^,|,$'), '');
     await db.update(
       'users',
       {'friends': newFriends},
@@ -588,6 +588,43 @@ class DbHelper {
       whereArgs: [username],
     );
     return res.isNotEmpty;
+  }
+
+  Future<void> insertUserIfNotExists({required String username,required String email}) async {
+    final db = await database;
+    final existing = await db.query(
+      'users',
+      where: 'username = ?',
+      whereArgs: [username],
+    );
+    if (existing.isEmpty) {
+      final randomPass = generateRandomPassword(16);
+      await db.insert('users', {
+        'username': username,
+        'email': email,   
+        'password': randomPass,
+      });
+    }
+  }
+
+  String generateRandomPassword(int length) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz'
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        '0123456789'
+        '!@#\$%^&*()-_=+[]{}|;:,.<>?';
+    final rand = Random.secure();
+    return List.generate(length, (_) => chars[rand.nextInt(chars.length)])
+        .join();
+  }
+
+  Future<void> insertQuestionsIfMissing(String category, List<Map<String, dynamic>> problems) async {
+    final db = await database;
+    final existing = await db.query('questions', where: 'category = ?', whereArgs: [category]);
+    if (existing.isEmpty) {
+      for (var problem in problems) {
+        await db.insert('questions', problem);
+      }
+    }
   }
 
 }

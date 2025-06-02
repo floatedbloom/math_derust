@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 import '../data/db.dart';
-import '../session.dart';
+import '../session.dart' as app_session;
 import 'create_account.dart';
+import '../problems/int_alg_problems.dart';
+import '../problems/algebra_problems.dart';
+import '../problems/geometry_problems.dart';
+import '../problems/trig_problems.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -23,7 +29,7 @@ class _LoginState extends State<Login> {
 
     bool validUser = await db.validateUser(username, password);
     if (validUser) {
-      await Session.instance.setUser(username);
+      await app_session.Session.instance.setUser(username);
       await updateStreak();
       await DbHelper.instance.resetDailyQuests();
       if (mounted) {
@@ -45,6 +51,47 @@ class _LoginState extends State<Login> {
       }
     }
   }
+
+  Future<void> _signInWithGoogle() async {
+    try {
+      final response = await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+      );
+
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        // Use user.email or user.id as your username identifier
+        String username = user.email ?? user.id;
+
+        // Optional: insert into local DB if not already there
+        await DbHelper.instance.insertUserIfNotExists(username: username, email: user.email ?? "temp");
+        await DbHelper.instance.insertQuestionsIfMissing('Algebra', algProblems);
+        await DbHelper.instance.insertQuestionsIfMissing('Geometry', geoProblems);
+        await DbHelper.instance.insertQuestionsIfMissing('Trigonometry', trigProblems);
+        await DbHelper.instance.insertQuestionsIfMissing('Intermediate Algebra', intalgProblems);
+        // Set session username
+        await app_session.Session.instance.setUser(username);
+        await updateStreak();
+        await DbHelper.instance.resetDailyQuests();
+
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/home',
+            (_) => false,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in failed: ${e.toString()}')),
+        );
+      }
+      rethrow;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -111,6 +158,24 @@ class _LoginState extends State<Login> {
                     child: const Text(
                       'L O G I N', 
                       style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: _signInWithGoogle,
+                    icon: Image.asset(
+                      'assets/google_logo.png',
+                      height: 24,
+                      width: 24,
+                    ),
+                    label: const Text(
+                      'Sign in with Google',
+                      style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white10,
+                      foregroundColor: Colors.grey,
+                      minimumSize: Size(double.infinity, 48),
                     ),
                   ),
                   const SizedBox(height: 10),

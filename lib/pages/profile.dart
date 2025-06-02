@@ -115,14 +115,15 @@ class ProfileState extends State<Profile> {
                       ]
                     ),
                   ),
+                  const SizedBox(height: 120),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
                       Session.instance.currentUsername as String,
                       style: TextStyle(
-                        fontSize: 40,
+                        fontSize: 50,
                         fontWeight: FontWeight.w500,
-                        color: Color.fromARGB(255, 120, 120, 120),
+                        color: Color.fromARGB(255, 255, 198, 198),
                       ),
                     ),
                   ),
@@ -134,15 +135,15 @@ class ProfileState extends State<Profile> {
                       } else if (snapshot.hasError) {
                         return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Text('Error loading class'));
                       } else if (!snapshot.hasData || snapshot.data == null) {
-                        return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Center(child: Text('CLASS NOT SET',style: TextStyle(
-                            fontSize: 20,
+                        return ConstrainedBox(constraints: const BoxConstraints(minWidth: 200, maxWidth: 200, minHeight: 50, maxHeight: 50),child: Center(child: Text('No Class',style: TextStyle(
+                            fontSize: 30,
                             fontWeight: FontWeight.bold,
-                            color: const Color.fromARGB(255, 163, 4, 4),
+                            color: const Color.fromARGB(255, 149, 134, 134),
                             shadows: [
                               Shadow(
                                 offset: Offset(2.0, 2.0),
                                 blurRadius: 4.0,
-                                color: Color.fromRGBO(0, 0, 0, 0.3),
+                                color: Color.fromRGBO(172, 108, 108, 0.298),
                               )
                             ]
                           ),)));
@@ -150,11 +151,11 @@ class ProfileState extends State<Profile> {
                         return FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            "(${snapshot.data!})",
+                            "${snapshot.data!}",
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 30,
                               fontWeight: FontWeight.w500,
-                              color: Color.fromARGB(255, 120, 120, 120),
+                              color: Color.fromARGB(255, 170, 156, 156),
                             ),
                           ),
                         );
@@ -214,7 +215,7 @@ class ProfileState extends State<Profile> {
                                         ),);
                                     } else {
                                       return Text(
-                                        snapshot.data!.toString(),
+                                        snapshot.data!.toString() ?? "0",
                                         style: TextStyle(
                                           fontSize: 30,
                                           fontWeight: FontWeight.bold,
@@ -303,7 +304,7 @@ class ProfileState extends State<Profile> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  /*const SizedBox(height: 30),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: 300),
                     child: SingleChildScrollView(
@@ -326,8 +327,8 @@ class ProfileState extends State<Profile> {
                         ],
                       ),
                     )
-                  ),
-                  Row(
+                  ),*/
+                  /*Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ConstrainedBox(
@@ -363,7 +364,7 @@ class ProfileState extends State<Profile> {
                         )
                       ),
                     ],
-                  )
+                  )*/
                 ],
               ),
             ),

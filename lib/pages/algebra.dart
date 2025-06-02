@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:math_derust/data/db.dart';
 import 'package:math_derust/widgets/question.dart';
 import '../problems/algebra_problems.dart';
-import '../widgets/tree_node.dart';
 
 const Map<int, String> topicMap = {
   1: "Evaluate functions and use function notation",
@@ -48,7 +47,10 @@ class _AlgebraPageState extends State<AlgebraPage> {
   }
 
   void _initializeProblems() async {
-    await _addProblems(newProblems);
+    List<Map<String,dynamic>> existing = await db.queryWhere('questions', 'category=?', ['Algebra']);
+    if (existing.isEmpty) {
+      await _addProblems(newProblems);
+    }
     await _loadProblems();
   }
 

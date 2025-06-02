@@ -20,7 +20,7 @@ class _CreateAccountState extends State<CreateAccount> {
   final List<String> classOptions = ['Pre-Algebra', 'Introductory Algebra', 'Geometry','Intermediate Algebra','Precalculus','Calculus I','Calculus II','Calculus III','Calculus IV','Linear Algebra','Differential Equations'];
 
   Future<void> _createAccount() async {
-    String username = _usernameController.text;
+    String username = _usernameController.text.trim();
     String clas = selectedClass as String;
     String email = _emailController.text;
     String password = _passwordController.text;
@@ -29,39 +29,48 @@ class _CreateAccountState extends State<CreateAccount> {
     //capture context
     BuildContext currentContext = context;
 
+    // Check for empty username
+    if (username.isEmpty) {
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(content: Text('Username cannot be empty'))
+      );
+      return;
+    }
+
     //check the 2 passwords
     if (confirm != password) {
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(content: Text('Passwords do not match'))
       );
-    } else {
-      //create new user as Map
-      Map<String, dynamic> userMap = {
-        'username': username,
-        'email': email,
-        'password': password,
-        'friends': "",
-        'class': clas,
-      };      
-      //put into db
-      try {
-        await DbHelper.instance.insert('users', userMap);
-      }  on DatabaseException catch (e) {
-        ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text('Name or email is taken'))
-        );
-      }
-      //send to login screen
-      if (mounted) {
-        ScaffoldMessenger.of(currentContext).showSnackBar(
-          const SnackBar(content: Text('Account Creation Successful!'))
-        );
-        Navigator.of(currentContext).push(
-          MaterialPageRoute(
-            builder: (context) => const Login()
-          ),
-        );
-      }
+      return;
+    }
+    //create new user as Map
+    Map<String, dynamic> userMap = {
+      'username': username,
+      'email': email,
+      'password': password,
+      'friends': "",
+      'class': clas,
+    };      
+    //put into db
+    try {
+      await DbHelper.instance.insert('users', userMap);
+    }  on DatabaseException {
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(content: Text('Name or email is taken'))
+      );
+      return;
+    }
+    //send to login screen
+    if (mounted) {
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        const SnackBar(content: Text('Account Creation Successful!'))
+      );
+      Navigator.of(currentContext).push(
+        MaterialPageRoute(
+          builder: (context) => const Login()
+        ),
+      );
     }
   }
 
