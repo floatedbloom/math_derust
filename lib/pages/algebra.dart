@@ -1,23 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:math_derust/data/db.dart';
 import 'package:math_derust/widgets/question.dart';
+import 'package:math_derust/theme/app_theme.dart';
 import '../problems/algebra_problems.dart';
-
-const Map<int, String> topicMap = {
-  1: "Evaluate functions and use function notation",
-  2: "Solve linear systems of  equatons in two variables, including applications",
-  3: "Solve absolute value equations and inequalities",
-  4: "Add, subtract, multiply, divide and factor polynomial expressions",
-  5: "Add, subtract, multiply, divide and simplify rational expressions, including complex fractions",
-  6: "Solve rational equations",
-  7: "Solve literal equations for a specific variable",
-  8: "Simplify expressions involving rational exponents and convert between rational exponents and radicals",
-  9: "Simplify radical expressions",
-  10: "Solve radical equations and applications",
-  11: "Solve quadratic equations, including equations of quadratic form, by factoring, square root method, completing the square, and the quadratic formula",
-  12: "Graph quadratic functions",
-  13: "Solve applications involving quadratic equations",
-};
 
 class AlgebraPage extends StatefulWidget {
   const AlgebraPage({super.key});
@@ -26,28 +11,53 @@ class AlgebraPage extends StatefulWidget {
   State<AlgebraPage> createState() => _AlgebraPageState();
 }
 
-class _AlgebraPageState extends State<AlgebraPage> {
+class _AlgebraPageState extends State<AlgebraPage> with SingleTickerProviderStateMixin {
   DbHelper db = DbHelper.instance;
-  List<Map<String,dynamic>> questions = [];
-
+  List<Map<String, dynamic>> questions = [];
   List<Map<String, dynamic>> newProblems = algProblems;
+  bool _isLoading = true;
   
-  Future<void> _addProblems(List<Map<String,dynamic>> newProblems) async {
-    for (Map<String,dynamic> newProblem in newProblems) {
-      await db.insert('questions',newProblem);
+  late AnimationController _animController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOut,
+    );
+    _animController.forward();
+    _initializeProblems();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addProblems(List<Map<String, dynamic>> newProblems) async {
+    for (Map<String, dynamic> newProblem in newProblems) {
+      await db.insert('questions', newProblem);
     }
   }
 
   Future<void> _loadProblems() async {
-    List<Map<String,dynamic>> questions = await db.queryWhere('questions','category=?',['Algebra']);
+    List<Map<String, dynamic>> questions = await db.queryWhere('questions', 'category', 'Algebra');
     if (!mounted) return;
     setState(() {
       this.questions = questions;
+      _isLoading = false;
     });
   }
 
   void _initializeProblems() async {
-    List<Map<String,dynamic>> existing = await db.queryWhere('questions', 'category=?', ['Algebra']);
+    List<Map<String, dynamic>> existing = await db.queryWhere('questions', 'category', 'Algebra');
     if (existing.isEmpty) {
       await _addProblems(newProblems);
     }
@@ -55,61 +65,146 @@ class _AlgebraPageState extends State<AlgebraPage> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _initializeProblems();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.backgroundDark,
+      body: Stack(
+        children: [
+          const AnimatedBackground(
+            primaryColor: AppColors.algebraColor,
+            secondaryColor: Color(0xFF78909C),
+          ),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Column(
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.backgroundCard,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.grey.shade800.withOpacity(0.3),
+                            ),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: AppColors.algebraColor,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'ALGEBRA',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w300,
+                                  color: AppColors.algebraColor,
+                                  letterSpacing: 4,
+                                ),
+                              ),
+                              Text(
+                                '${questions.length} problems',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.algebraColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.functions_rounded,
+                            color: AppColors.algebraColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Questions list
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.algebraColor,
+                            ),
+                          )
+                        : questions.isEmpty
+                            ? _buildEmptyState()
+                            : ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.only(top: 8, bottom: 100),
+                                itemCount: questions.length,
+                                itemBuilder: (context, index) {
+                                  return QuestionWidget(
+                                    topic: 'Algebra',
+                                    name: questions[index]['name'],
+                                    difficulty: questions[index]['difficulty'],
+                                    content: questions[index]['content'],
+                                    answers: questions[index]['answers'],
+                                    db: db,
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.builder(
-            itemCount: questions.length,
-            itemBuilder: (context,index) {
-              return QuestionWidget(
-                topic: 'Algebra',
-                name: questions[index]['name'], 
-                difficulty: questions[index]['difficulty'], 
-                content: questions[index]['content'], 
-                answers: questions[index]['answers'],
-                db: db
-              );
-            },
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.algebraColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(
+              Icons.functions_rounded,
+              size: 40,
+              color: AppColors.algebraColor,
+            ),
           ),
-        )
-      ],
+          const SizedBox(height: 20),
+          Text(
+            'No problems yet',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade500,
+            ),
+          ),
+        ],
+      ),
     );
-    /*Map<String,List<Map<String,dynamic>>> groupedQuestions = {};
-    for (var q in questions) {
-      final String topic = topicMap[q['topic']] ?? 'Unknown';
-      
-      if (!groupedQuestions.containsKey(topic)) {
-        groupedQuestions[topic] = [];
-      }
-      groupedQuestions[topic]!.add({
-        ...q,
-        'topic': topic,
-      });
-    }
-
-    var topicNodes = groupedQuestions.entries.map((entry) {
-      return TreeNode(
-        topic: entry.key, 
-        questions: entry.value,
-        db: db
-      );
-    }).toList();
-
-    return Column(
-      children: [
-        Expanded(
-          child: ListView(
-            children: topicNodes,
-          ),
-        )
-      ],
-    );*/
   }
 }

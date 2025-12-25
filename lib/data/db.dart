@@ -1,478 +1,670 @@
-import 'dart:async';
 import 'dart:math';
 
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../session.dart';
-
-/* 
-  Add stuff for community page later, like upvoting posts and things like that
-  Add user stuff later, like user xp
-
-*/
+import '../session.dart' as app_session;
 
 class DbHelper {
-  static final DbHelper instance = DbHelper._privateConstructor(); //singleton -- only one instance allowed to exist
-  static Database? _database; // static var that holds the sqlite Database object
+  static final DbHelper instance = DbHelper._privateConstructor();
+  DbHelper._privateConstructor();
 
-  DbHelper._privateConstructor(); // this is here to make the singleton actually only create one instance
+  SupabaseClient get _client => Supabase.instance.client;
 
-  //a getter function for the initialisation
-  Future<Database> get database async {
-    if (_database != null) return _database!; // if it already got instantiated, return that one
-    _database = await _initDb(); // if not, instantiate it
-    return _database!; // ! protects against null values
+  // Insert a row into any table
+  Future<Map<String, dynamic>?> insert(String table, Map<String, dynamic> row) async {
+    final result = await _client.from(table).insert(row).select().maybeSingle();
+    return result;
   }
 
-  // Initiali
-  Future<Database> _initDb() async {
-    String path = join(await getDatabasesPath(), 'math_derust.db');
-    print("Database created!");
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _onCreate,
-    );
+  // Update rows in a table
+  Future<void> update(String table, Map<String, dynamic> row, String whereColumn, dynamic whereValue) async {
+    await _client.from(table).update(row).eq(whereColumn, whereValue);
   }
 
-  Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
-        xp_tot INTEGER GENERATED ALWAYS AS (xp_algebra + xp_geometry + xp_intalg + xp_trig + xp_quest) STORED,
-        xp_algebra INTEGER DEFAULT 0,
-        xp_geometry INTEGER DEFAULT 0,
-        xp_intalg INTEGER DEFAULT 0,
-        xp_trig INTEGER DEFAULT 0,
-        xp_quest INTEGER DEFAULT 0,
-        friends TEXT,
-        class TEXT,
-        streak INTEGER DEFAULT 1
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE questions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        category TEXT NOT NULL,
-        topic INTEGER NOT NULL,
-        difficulty INTEGER NOT NULL,
-        content TEXT NOT NULL,
-        answers TEXT NOT NULL,
-        correct TEXT NOT NULL
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE quests (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        condition TEXT NOT NULL,
-        xp INTEGER NOT NULL,
-        goal INTEGER NOT NULL
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE user_quests (
-        user_id INTEGER NOT NULL,
-        quest_id INTEGER NOT NULL,
-        progress INTEGER DEFAULT 0,  -- Tracks progress
-        completed BOOLEAN DEFAULT 0, -- Marks quest completion
-        PRIMARY KEY (user_id, quest_id),
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (quest_id) REFERENCES quests(id) ON DELETE CASCADE
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE posts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        creator_id INTEGER NOT NULL,
-        title TEXT,
-        content TEXT NOT NULL,
-        likes INTEGER DEFAULT 0,
-        FOREIGN KEY (creator_id) REFERENCES users (id)
-      )
-    ''');
-
-     await db.execute('''
-      CREATE TABLE comments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        creator_id INTEGER NOT NULL,
-        content TEXT NOT NULL,
-        likes INTEGER DEFAULT 0,
-        parent_id INTEGER NOT NULL,
-        FOREIGN KEY (parent_id) REFERENCES community (id),
-        FOREIGN KEY (creator_id) REFERENCES users (id)
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE mistakes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        question_id INTEGER NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (question_id) REFERENCES questions (id)
-      )
-    ''');
+  // Delete rows from a table
+  Future<void> delete(String table, String whereColumn, dynamic whereValue) async {
+    await _client.from(table).delete().eq(whereColumn, whereValue);
   }
 
-  Future<bool> validateUser(String username, String password) async {
-    Database db = await database;
-    final result = await db.query(
-      'users',
-      where: 'username = ? AND password = ?',
-      whereArgs: [username, password],
-    );
-    return result.isNotEmpty;
-  }
-
-  // BASIC METHODS FOR DB.UPDATE and DB.INSERT
-  Future<int> insert(String table, Map<String, dynamic> row) async {
-    Database db = await database;
-    return await db.insert(table, row);
-  }
-
-  Future<int> update(String table, Map<String, dynamic> row, String whereClause, List<dynamic> whereArgs) async {
-    Database db = await database;
-    return await db.update(table, row, where: whereClause, whereArgs: whereArgs);
-  }
-
-  Future<int> delete(String table, String whereClause, List<dynamic> whereArgs) async {
-    Database db = await database;
-    return await db.delete(table, where: whereClause, whereArgs: whereArgs);
-  }
-
-  //query all rows
+  // Query all rows from a table
   Future<List<Map<String, dynamic>>> queryAll(String table) async {
-    Database db = await database;
-    return await db.query(table);
+    final result = await _client.from(table).select();
+    return List<Map<String, dynamic>>.from(result);
   }
 
-  // Query specific rows
-  Future<List<Map<String, dynamic>>> queryWhere(String table, String whereClause, List<dynamic> whereArgs) async {
-    Database db = await database;
-    return await db.query(table, where: whereClause, whereArgs: whereArgs);
+  // Query with where clause
+  Future<List<Map<String, dynamic>>> queryWhere(String table, String whereColumn, dynamic whereValue) async {
+    final result = await _client.from(table).select().eq(whereColumn, whereValue);
+    return List<Map<String, dynamic>>.from(result);
   }
 
-  //get all mistakes
+  // Get all mistakes for a user with question details
   Future<List<Map<String, dynamic>>> queryUserMistakes(int userId) async {
-    Database db = await database;
-    List<Map<String,dynamic>> mistakes =  await db.query('mistakes', where: 'user_id = ?', whereArgs: [userId]);
-    List<Map<String,dynamic>> questions = [];
-    for (Map<String, dynamic> mistake in mistakes) {
-      int questionId = mistake['question_id'];
-      List<Map<String, dynamic>> questionResult = await db.query(
-        'questions',
-        where: 'id = ?',
-        whereArgs: [questionId],
-      );
+    final mistakes = await _client
+        .from('mistakes')
+        .select('question_id')
+        .eq('user_id', userId);
 
-      if (questionResult.isNotEmpty) {
-        questions.add(questionResult.first);
+    List<Map<String, dynamic>> questions = [];
+    for (var mistake in mistakes) {
+      final questionResult = await _client
+          .from('questions')
+          .select()
+          .eq('id', mistake['question_id'])
+          .maybeSingle();
+
+      if (questionResult != null) {
+        questions.add(Map<String, dynamic>.from(questionResult));
       }
     }
     return questions;
   }
-  //only use if updating db structure and dont care abt data
-  Future<void> deleteDatabaseFile() async {
-    String path = join(await getDatabasesPath(), 'math_derust.db');
-    await deleteDatabase(path);
-    print('Database deleted!');
-  }
 
+  // Get username by ID
   Future<String> getUsernameById(int id) async {
-    Database db = await database;
-    var result = await db.query('users', columns: ['username'], where: 'id = ?', whereArgs: [id]);
-    return result.isNotEmpty ? result.first['username'] as String : "Unknown User";
+    final result = await _client
+        .from('users')
+        .select('username')
+        .eq('id', id)
+        .maybeSingle();
+    return result?['username'] as String? ?? "Unknown User";
   }
 
-  Future<bool> checkAnswer(String questionName, String userAnswer, String category) async {
-    Database db = await database;
-    category = category.trim();
-    List<Map<String, dynamic>> result = await db.query(
-      'questions',
-      columns: ['id','correct'],
-      where: 'name = ? AND category = ?',
-      whereArgs: [questionName,category],
-    );
-    
-    if (result.isEmpty) return false;
+  // Get user info by ID (username and avatar)
+  Future<Map<String, String?>> getUserInfoById(int id) async {
+    final result = await _client
+        .from('users')
+        .select('username, avatar_url')
+        .eq('id', id)
+        .maybeSingle();
+    return {
+      'username': result?['username'] as String? ?? "Unknown User",
+      'avatar_url': result?['avatar_url'] as String?,
+    };
+  }
 
-    int questionId = result.first['id'] as int;
-    
-    String correct = result.first['correct'] as String;
+  // Check answer and record mistakes
+  Future<bool> checkAnswer(String questionName, String userAnswer, String category) async {
+    category = category.trim();
+    final result = await _client
+        .from('questions')
+        .select('id, correct')
+        .eq('name', questionName)
+        .eq('category', category)
+        .maybeSingle();
+
+    if (result == null) return false;
+
+    int questionId = result['id'] as int;
+    String correct = result['correct'] as String;
     String correctAnswer = correct.trim();
     bool isCorrect = correctAnswer.toLowerCase() == userAnswer.trim().toLowerCase();
 
-     if (!isCorrect) {
-      List<Map<String, dynamic>> mistakeExists = await db.query(
-        'mistakes',
-        where: 'user_id = ? AND question_id = ?',
-        whereArgs: [Session.instance.currentUserId, questionId],
-      );
+    if (!isCorrect && app_session.Session.instance.currentUserId != null) {
+      // Check if mistake already exists
+      final mistakeExists = await _client
+          .from('mistakes')
+          .select('id')
+          .eq('user_id', app_session.Session.instance.currentUserId!)
+          .eq('question_id', questionId)
+          .maybeSingle();
 
-      if (mistakeExists.isEmpty) {
-        await db.insert('mistakes', {
-          'user_id': Session.instance.currentUserId,
+      if (mistakeExists == null) {
+        await _client.from('mistakes').insert({
+          'user_id': app_session.Session.instance.currentUserId,
           'question_id': questionId,
         });
       }
     }
-    
+
     return isCorrect;
   }
 
-  Future<List<Map<String, dynamic>>> getUserQuests(int userId) async {
-    final db = await database;
-    
-    // the initial quests for everyone
-    List<Map<String, dynamic>> quests = await db.query('quests');
-    for (var quest in quests) {
-      int questId = quest['id'];
-      List<Map<String, dynamic>> existing = await db.query(
-        'user_quests',
-        where: 'user_id = ? AND quest_id = ?',
-        whereArgs: [userId, questId],
-      );
+  // Number of daily quests to assign
+  static const int dailyQuestCount = 5;
 
-      if (existing.isEmpty) {
-        await db.insert('user_quests', {
-          'user_id': userId,
-          'quest_id': questId,
-          'progress': 0,
-          'completed': 0,
-        });
-        print("Assigned quest '${quest['name']}' to user $userId");
+  // Get user quests for today
+  Future<List<Map<String, dynamic>>> getUserQuests(int userId) async {
+    final today = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+    
+    // Get user's quests for today with quest details
+    final userQuests = await _client
+        .from('user_quests')
+        .select('quest_id, progress, completed, assigned_date, quests(id, name, xp, goal, category, difficulty, icon)')
+        .eq('user_id', userId)
+        .eq('assigned_date', today);
+
+    return userQuests.map<Map<String, dynamic>>((uq) {
+      final quest = uq['quests'] as Map<String, dynamic>;
+      return {
+        'id': quest['id'],
+        'name': quest['name'],
+        'xp': quest['xp'],
+        'goal': quest['goal'],
+        'category': quest['category'],
+        'difficulty': quest['difficulty'],
+        'icon': quest['icon'],
+        'progress': uq['progress'],
+        'completed': (uq['completed'] == true || uq['completed'] == 1) ? 1 : 0,
+      };
+    }).toList();
+  }
+
+  // Initialize quests - assigns random quests for today if needed
+  Future<void> initializeQuests() async {
+    final userId = app_session.Session.instance.currentUserId;
+    if (userId == null) return;
+    
+    final today = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+    
+    // Check if quests already assigned for today
+    final existingToday = await _client
+        .from('user_quests')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('assigned_date', today)
+        .limit(1);
+    
+    if (existingToday.isNotEmpty) return; // Already assigned for today
+    
+    // Delete old quest assignments for this user
+    await _client
+        .from('user_quests')
+        .delete()
+        .eq('user_id', userId);
+    
+    // Get all available quests
+    final allQuests = await _client.from('quests').select('id, category, difficulty');
+    
+    // Select random quests with category diversity
+    final selectedQuestIds = _selectDiverseQuests(allQuests);
+    
+    // Assign selected quests to user
+    for (var questId in selectedQuestIds) {
+      await _client.from('user_quests').insert({
+        'user_id': userId,
+        'quest_id': questId,
+        'progress': 0,
+        'completed': false,
+        'assigned_date': today,
+      });
+    }
+  }
+
+  // Select diverse quests from different categories
+  List<int> _selectDiverseQuests(List<dynamic> allQuests) {
+    final rand = Random();
+    final selectedIds = <int>[];
+    
+    // Group quests by category
+    final byCategory = <String, List<int>>{};
+    for (var quest in allQuests) {
+      final category = quest['category'] as String;
+      final id = quest['id'] as int;
+      byCategory.putIfAbsent(category, () => []).add(id);
+    }
+    
+    // Prioritize categories to ensure variety
+    final priorityCategories = ['learning', 'accuracy', 'practice', 'social', 'achievement', 'subject', 'streak'];
+    
+    // First pass: pick one from each priority category
+    for (var category in priorityCategories) {
+      if (selectedIds.length >= dailyQuestCount) break;
+      if (byCategory.containsKey(category) && byCategory[category]!.isNotEmpty) {
+        final questsInCategory = byCategory[category]!;
+        final randomQuest = questsInCategory[rand.nextInt(questsInCategory.length)];
+        if (!selectedIds.contains(randomQuest)) {
+          selectedIds.add(randomQuest);
+        }
       }
     }
-    final List<Map<String, dynamic>> userQuests = await db.rawQuery('''
-      SELECT quests.id, quests.name, quests.xp, user_quests.progress, user_quests.completed, quests.goal
-      FROM user_quests
-      JOIN quests ON user_quests.quest_id = quests.id
-      WHERE user_quests.user_id = ?
-    ''', [userId]);
-
-    return userQuests;
-  }
-
-  Future<void> initializeQuests() async {
-    final db = await database;
-    //check if its already initialized
-    List<Map<String, dynamic>> existingQuests = await db.query('quests');
-    if (existingQuests.isNotEmpty) return;
-
-    List<Map<String, dynamic>> quests = [
-      {"name": "Finish 10 Lessons", "condition": "Complete 10 lessons", "xp": 50, "goal": 10},
-      //{"name": "Do 2 Mastery Challenges", "condition": "Complete 2 mastery challenges", "xp": 100, "goal": 2},
-      {"name": "Fix 10 Mistakes", "condition": "Correct 10 incorrect answers", "xp": 20, "goal": 10},
-      {"name": "Earn 500 XP", "condition": "Gain a total of 500 XP", "xp": 200, "goal": 500},
-    ];
-
-    for (var quest in quests) {
-      await db.insert("quests", quest);
+    
+    // Second pass: fill remaining slots with random quests
+    final allIds = allQuests.map((q) => q['id'] as int).toList()..shuffle(rand);
+    for (var id in allIds) {
+      if (selectedIds.length >= dailyQuestCount) break;
+      if (!selectedIds.contains(id)) {
+        selectedIds.add(id);
+      }
     }
+    
+    return selectedIds;
   }
 
+  // Update quest progress
   Future<void> updateUserQuestProgress(int userId, int questId, int progressIncrease) async {
-    final db = await database;
-      List<Map<String, dynamic>> existingQuest = await db.query(
-      'user_quests',
-      where: 'user_id = ? AND quest_id = ?',
-      whereArgs: [userId, questId],
-    );
+    final today = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+    
+    final existingQuest = await _client
+        .from('user_quests')
+        .select('progress, completed')
+        .eq('user_id', userId)
+        .eq('quest_id', questId)
+        .eq('assigned_date', today)
+        .maybeSingle();
 
-    if (existingQuest.isEmpty) {
-      print("Quest not found for user: $userId");
-      return;
-    }
+    if (existingQuest == null) return;
+    if (existingQuest['completed'] == true) return; // Already completed
 
-    int currentProgress = existingQuest.first['progress'] as int;
+    int currentProgress = existingQuest['progress'] as int;
 
-    List<Map<String, dynamic>> questData = await db.query(
-      'quests',
-      where: 'id = ?',
-      whereArgs: [questId],
-    );
+    final questData = await _client
+        .from('quests')
+        .select('goal, xp')
+        .eq('id', questId)
+        .maybeSingle();
 
-    if (questData.isEmpty) {
-      print("Quest details not found for quest ID: $questId");
-      return;
-    }
+    if (questData == null) return;
 
-    int goal = questData.first['goal'] as int;
+    int goal = questData['goal'] as int;
     int newProgress = currentProgress + progressIncrease;
-
     bool completed = newProgress >= goal;
-    // UPDATE XPPPPPPP
+
+    // Award XP if completed
     if (completed) {
-      List<Map<String, dynamic>> result = await db.query(
-        'users',
-        columns: ['xp_quest'],
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+      final userData = await _client
+          .from('users')
+          .select('xp_quest')
+          .eq('id', userId)
+          .maybeSingle();
 
-      int currentXp = result.isNotEmpty ? result.first['xp_quest'] as int : 0;
-      int newXp = currentXp + (questData.first['xp'] as int);
+      int currentXp = userData?['xp_quest'] as int? ?? 0;
+      int newXp = currentXp + (questData['xp'] as int);
 
-      await db.update(
-        'users',
-        {'xp_quest': newXp},
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+      await _client
+          .from('users')
+          .update({'xp_quest': newXp})
+          .eq('id', userId);
     }
 
-    await db.update(
-      'user_quests',
-      {
-        'progress': newProgress > goal ? goal : newProgress, 
-        'completed': completed ? 1 : 0
-      },
-      where: 'user_id = ? AND quest_id = ?',
-      whereArgs: [userId, questId],
-    );
-
-    print("Updated progress for User $userId on Quest $questId: $newProgress / $goal");
+    await _client
+        .from('user_quests')
+        .update({
+          'progress': newProgress > goal ? goal : newProgress,
+          'completed': completed,
+        })
+        .eq('user_id', userId)
+        .eq('quest_id', questId)
+        .eq('assigned_date', today);
   }
 
+  // Update quest progress by category/condition
+  Future<void> updateQuestsByCondition(int userId, String questCondition, {int progressIncrease = 1}) async {
+    final today = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+    
+    // Get quests matching the condition that are assigned today
+    List<int> questIdsToUpdate = [];
+    
+    // Map condition types to quest names/patterns
+    switch (questCondition) {
+      case 'lesson_complete':
+        // Update all lesson-related quests
+        final lessonQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        
+        for (var uq in lessonQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('lesson') || 
+              questName.toLowerCase().contains('learner') ||
+              questName.toLowerCase().contains('student') ||
+              questName.toLowerCase().contains('scholar') ||
+              questName.toLowerCase().contains('knowledge')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'algebra_lesson':
+        final algebraQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in algebraQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('algebra')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'geometry_lesson':
+        final geomQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in geomQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('geometry')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'trig_lesson':
+        final trigQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in trigQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('trig')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'intalg_lesson':
+        final intalgQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in intalgQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('int.') || 
+              questName.toLowerCase().contains('intermediate')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'mistake_fixed':
+        final mistakeQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in mistakeQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('mistake') || 
+              questName.toLowerCase().contains('error') ||
+              questName.toLowerCase().contains('perfectionist') ||
+              questName.toLowerCase().contains('fix')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'correct_answer':
+        final answerQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in answerQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('answer') || 
+              questName.toLowerCase().contains('first steps') ||
+              questName.toLowerCase().contains('warmed up') ||
+              questName.toLowerCase().contains('roll') ||
+              questName.toLowerCase().contains('machine')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'xp_earned':
+        final xpQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in xpQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('xp') || 
+              questName.toLowerCase().contains('earn')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'post_created':
+        final postQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in postQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('post') || 
+              questName.toLowerCase().contains('community contributor') ||
+              questName.toLowerCase().contains('discussion')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'like_given':
+        final likeQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in likeQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('like') || 
+              questName.toLowerCase().contains('friendly') ||
+              questName.toLowerCase().contains('supportive')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'comment_created':
+        final commentQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in commentQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('comment') || 
+              questName.toLowerCase().contains('conversationalist') ||
+              questName.toLowerCase().contains('participant')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'daily_login':
+        final loginQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in loginQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('daily') || 
+              questName.toLowerCase().contains('dedication') ||
+              questName.toLowerCase().contains('log in')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'streak_update':
+        final streakQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name, goal)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in streakQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('streak')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+    }
+    
+    // Update progress for all matching quests
+    for (var questId in questIdsToUpdate) {
+      await updateUserQuestProgress(userId, questId, progressIncrease);
+    }
+  }
+
+  // Update streak-based quests with actual streak value
+  Future<void> updateStreakQuests(int userId, int currentStreak) async {
+    final today = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+    
+    final streakQuests = await _client
+        .from('user_quests')
+        .select('quest_id, quests!inner(id, name, goal)')
+        .eq('user_id', userId)
+        .eq('assigned_date', today);
+    
+    for (var uq in streakQuests) {
+      final questName = (uq['quests'] as Map)['name'] as String;
+      final goal = (uq['quests'] as Map)['goal'] as int;
+      
+      if (questName.toLowerCase().contains('streak')) {
+        // Set progress to current streak (not incremental)
+        final questId = uq['quest_id'] as int;
+        bool completed = currentStreak >= goal;
+        
+        // Check if already completed
+        final existingQuest = await _client
+            .from('user_quests')
+            .select('completed')
+            .eq('user_id', userId)
+            .eq('quest_id', questId)
+            .eq('assigned_date', today)
+            .maybeSingle();
+        
+        if (existingQuest != null && existingQuest['completed'] == true) continue;
+        
+        // Award XP if completing now
+        if (completed) {
+          final questData = await _client
+              .from('quests')
+              .select('xp')
+              .eq('id', questId)
+              .maybeSingle();
+          
+          if (questData != null) {
+            final userData = await _client
+                .from('users')
+                .select('xp_quest')
+                .eq('id', userId)
+                .maybeSingle();
+            
+            int currentXp = userData?['xp_quest'] as int? ?? 0;
+            int newXp = currentXp + (questData['xp'] as int);
+            
+            await _client
+                .from('users')
+                .update({'xp_quest': newXp})
+                .eq('id', userId);
+          }
+        }
+        
+        await _client
+            .from('user_quests')
+            .update({
+              'progress': currentStreak > goal ? goal : currentStreak,
+              'completed': completed,
+            })
+            .eq('user_id', userId)
+            .eq('quest_id', questId)
+            .eq('assigned_date', today);
+      }
+    }
+  }
+
+  // Reset daily quests (called on login - now handles random quest assignment)
   Future<void> resetDailyQuests() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastReset = prefs.getString('last_reset_date');
-    final today = DateTime.now().toIso8601String().substring(0, 10); // Format: YYYY-MM-DD
-
-    if (lastReset == today) {
-      print("Quests already reset today.");
-      return; // Avoid resetting multiple times in a day
+    // Initialize quests for today (will only assign if not already done)
+    await initializeQuests();
+    
+    // Update daily login quest
+    final userId = app_session.Session.instance.currentUserId;
+    if (userId != null) {
+      await updateQuestsByCondition(userId, 'daily_login');
     }
-
-    final db = await database;
-    await db.update(
-      'user_quests',
-      {'completed': 0},
-    );
-
-    await prefs.setString('last_reset_date', today); // Store today's date
-    print("Daily quests reset!");
   }
 
+  // Remove a mistake
   Future<void> removeMistake(int userId, int questionId) async {
-    Database db = await database;
-
-    await db.delete(
-      'mistakes',
-      where: 'user_id = ? AND question_id = ?',
-      whereArgs: [userId, questionId],
-    );
+    await _client
+        .from('mistakes')
+        .delete()
+        .eq('user_id', userId)
+        .eq('question_id', questionId);
   }
 
+  // Get question ID by name and category
   Future<int?> getQuestionIdByNameAndCategory(String questionName, String category) async {
-    Database db = await database;
+    final result = await _client
+        .from('questions')
+        .select('id')
+        .eq('name', questionName)
+        .eq('category', category)
+        .maybeSingle();
 
-    List<Map<String, dynamic>> result = await db.query(
-      'questions',
-      columns: ['id'],
-      where: 'name = ? AND category = ?',
-      whereArgs: [questionName,category],
-    );
-
-    if (result.isNotEmpty) {
-      return result.first['id'] as int;
-    }
-    return null;
+    return result?['id'] as int?;
   }
-  
+
+  // Get question category by ID
   Future<String?> getQuestionCategoryById(int questionId) async {
-    Database db = await database;
+    final result = await _client
+        .from('questions')
+        .select('category')
+        .eq('id', questionId)
+        .maybeSingle();
 
-    List<Map<String, dynamic>> result = await db.query(
-      'questions',
-      columns: ['category'],
-      where: 'id = ?',
-      whereArgs: [questionId],
-    );
-
-    if (result.isNotEmpty) {
-      return result.first['category'] as String;
-    }
-
-    return null;
+    return result?['category'] as String?;
   }
 
+  // Award XP for correct answer
   Future<void> broDidntMessUp(int questionId, String questionType, int userId) async {
-    Database db = await database;
+    final userData = await _client
+        .from('users')
+        .select('xp_algebra, xp_geometry, xp_intalg, xp_trig')
+        .eq('id', userId)
+        .maybeSingle();
 
-    List<Map<String, dynamic>> result = await db.query(
-      'users',
-      columns: ['xp_algebra', 'xp_geometry', 'xp_intalg', 'xp_trig'],
-      where: 'id = ?',
-      whereArgs: [userId],
-    );
+    if (userData == null) return;
+
+    Map<String, dynamic> updateData = {};
 
     if (questionType == "Algebra") {
-      int currentXp = result.isNotEmpty ? result.first['xp_algebra'] as int : 0;
-      int newXp = currentXp + 10;
-      await db.update(
-        'users',
-        {'xp_algebra': newXp},
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+      int currentXp = userData['xp_algebra'] as int? ?? 0;
+      updateData['xp_algebra'] = currentXp + 10;
     } else if (questionType == "Geometry") {
-      int currentXp = result.isNotEmpty ? result.first['xp_geometry'] as int : 0;
-      int newXp = currentXp + 10;
-      await db.update(
-        'users',
-        {'xp_geometry': newXp},
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+      int currentXp = userData['xp_geometry'] as int? ?? 0;
+      updateData['xp_geometry'] = currentXp + 10;
     } else if (questionType == "Intermediate Algebra") {
-      int currentXp = result.isNotEmpty ? result.first['xp_intalg'] as int : 0;
-      int newXp = currentXp + 10;
-      await db.update(
-        'users',
-        {'xp_intalg': newXp},
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+      int currentXp = userData['xp_intalg'] as int? ?? 0;
+      updateData['xp_intalg'] = currentXp + 10;
     } else {
-      int currentXp = result.isNotEmpty ? result.first['xp_trig'] as int : 0;
-      int newXp = currentXp + 10;
-      await db.update(
-        'users',
-        {'xp_trig': newXp},
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+      int currentXp = userData['xp_trig'] as int? ?? 0;
+      updateData['xp_trig'] = currentXp + 10;
     }
+
+    await _client.from('users').update(updateData).eq('id', userId);
   }
+
+  // Get user XP breakdown
   Future<Map<String, int>> getUserXp(int userId) async {
-    Database db = await database;
+    final result = await _client
+        .from('users')
+        .select('xp_tot, xp_algebra, xp_geometry, xp_intalg, xp_trig')
+        .eq('id', userId)
+        .maybeSingle();
 
-    List<Map<String, dynamic>> result = await db.query(
-      'users',
-      columns: ['xp_tot', 'xp_algebra', 'xp_geometry', 'xp_intalg', 'xp_trig'],
-      where: 'id = ?',
-      whereArgs: [userId],
-    );
-
-    if (result.isNotEmpty) {
+    if (result != null) {
       return {
-        'xp_tot': result.first['xp_tot'] as int,
-        'xp_algebra': result.first['xp_algebra'] as int,
-        'xp_geometry': result.first['xp_geometry'] as int,
-        'xp_intalg': result.first['xp_intalg'] as int,
-        'xp_trig': result.first['xp_trig'] as int,
+        'xp_tot': result['xp_tot'] as int? ?? 0,
+        'xp_algebra': result['xp_algebra'] as int? ?? 0,
+        'xp_geometry': result['xp_geometry'] as int? ?? 0,
+        'xp_intalg': result['xp_intalg'] as int? ?? 0,
+        'xp_trig': result['xp_trig'] as int? ?? 0,
       };
     }
 
@@ -484,124 +676,184 @@ class DbHelper {
       'xp_trig': 0,
     };
   }
-  // ONE USER CAN LIKE INFINITE TIMES
-  Future<void> likeContent(int contentId, String contentType) async {
-    final db = await DbHelper.instance.database;
 
-    String tableName = contentType == 'post' ? 'posts' : 'comments';
-
-    await db.rawUpdate(
-      'UPDATE $tableName SET likes = likes + 1 WHERE id = ?',
-      [contentId],
-    );
+  // Check if user has liked content
+  Future<bool> hasUserLiked(int contentId, String contentType) async {
+    final userId = app_session.Session.instance.currentUserId;
+    if (userId == null) return false;
+    
+    final result = await _client
+        .from('user_likes')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('content_type', contentType)
+        .eq('content_id', contentId)
+        .maybeSingle();
+    
+    return result != null;
   }
 
-  Future<Map<String,int>> getUserFriends(int userId) async {
-    Database db = await database;
+  // Toggle like on content (post or comment) - returns new like count and liked status
+  Future<Map<String, dynamic>> toggleLike(int contentId, String contentType) async {
+    final userId = app_session.Session.instance.currentUserId;
+    if (userId == null) return {'likes': 0, 'liked': false};
+    
+    String tableName = contentType == 'post' ? 'posts' : 'comments';
+    
+    // Check if already liked
+    final existingLike = await _client
+        .from('user_likes')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('content_type', contentType)
+        .eq('content_id', contentId)
+        .maybeSingle();
+    
+    // Get current like count
+    final current = await _client
+        .from(tableName)
+        .select('likes')
+        .eq('id', contentId)
+        .maybeSingle();
+    
+    int currentLikes = current?['likes'] as int? ?? 0;
+    bool nowLiked;
+    
+    if (existingLike != null) {
+      // Unlike - remove the like
+      await _client
+          .from('user_likes')
+          .delete()
+          .eq('user_id', userId)
+          .eq('content_type', contentType)
+          .eq('content_id', contentId);
+      
+      currentLikes = (currentLikes - 1).clamp(0, 999999);
+      nowLiked = false;
+    } else {
+      // Like - add the like
+      await _client.from('user_likes').insert({
+        'user_id': userId,
+        'content_type': contentType,
+        'content_id': contentId,
+      });
+      
+      currentLikes++;
+      nowLiked = true;
+      
+      // Update quest progress for giving likes (only when liking, not unliking)
+      await updateQuestsByCondition(userId, 'like_given');
+    }
+    
+    // Update the like count on the content
+    await _client
+        .from(tableName)
+        .update({'likes': currentLikes})
+        .eq('id', contentId);
+    
+    return {'likes': currentLikes, 'liked': nowLiked};
+  }
 
-    List<Map<String, dynamic>> result = await db.query(
-      'users',
-      columns: ['friends'],
-      where: 'id = ?',
-      whereArgs: [userId],
-    );
+  // Get comment count for a post
+  Future<int> getCommentCount(int postId) async {
+    final result = await _client
+        .from('comments')
+        .select('id')
+        .eq('parent_id', postId);
+    
+    return (result as List).length;
+  }
 
-     if (result.isEmpty || result.first['friends'] == null || result.first['friends'].toString().trim().isEmpty) return {};
+  // Get user friends with XP
+  Future<Map<String, int>> getUserFriends(int userId) async {
+    final result = await _client
+        .from('users')
+        .select('friends')
+        .eq('id', userId)
+        .maybeSingle();
 
-    List<String> friendNames = [];
-    if (result.isNotEmpty) {
-      String friendsString = result.first['friends'] as String;
-      friendNames = friendsString.split(',');
+    if (result == null || result['friends'] == null || result['friends'].toString().trim().isEmpty) {
+      return {};
     }
 
-    List<List<Map<String, dynamic>>> ans = [];
+    List<String> friendNames = (result['friends'] as String).split(',');
+    Map<String, int> friends = {};
 
     for (String name in friendNames) {
-      ans.add(await db.query(
-        'users',
-        columns: ['xp_tot'],
-        where: 'username=?',
-        whereArgs: [name]
-      ));
+      if (name.trim().isEmpty) continue;
+      
+      final friendData = await _client
+          .from('users')
+          .select('xp_tot')
+          .eq('username', name.trim())
+          .maybeSingle();
 
+      friends[name.trim()] = friendData?['xp_tot'] as int? ?? 0;
     }
-    Map<String,int> friends = {};
-    if (ans.isNotEmpty) {
-      for (int i = 0; i < friendNames.length; i++) {
-        if (ans[i].isNotEmpty && ans[i][0]['xp_tot'] != null) {
-          friends[friendNames[i]] = ans[i][0]['xp_tot'] as int;
-        } else {
-          friends[friendNames[i]] = 0;
-        }
-      }
-    }
+
     return friends;
   }
 
-  Future<void> addFriend(int userId, String friendName) async{
-    Database db = await database;
+  // Add a friend
+  Future<void> addFriend(int userId, String friendName) async {
+    final res = await _client
+        .from('users')
+        .select('friends')
+        .eq('id', userId)
+        .maybeSingle();
 
-    List<Map<String, Object?>> res = await db.query('users', columns: ['friends'], where: 'id=?', whereArgs: [userId]);
-    String newFriends;
-    if (res.isNotEmpty) {
-      String currFriends = res.first['friends'] as String;
-      newFriends = currFriends.isEmpty ? friendName : "$currFriends,$friendName";
-    } else {
-      newFriends = friendName;
-    }
-    await db.update(
-        'users',
-        {'friends': newFriends},
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+    String currFriends = res?['friends'] as String? ?? '';
+    String newFriends = currFriends.isEmpty ? friendName : "$currFriends,$friendName";
+
+    await _client
+        .from('users')
+        .update({'friends': newFriends})
+        .eq('id', userId);
   }
 
+  // Remove a friend
   Future<void> removeFriend(int userId, String friendName) async {
-    Database db = await database;
+    final res = await _client
+        .from('users')
+        .select('friends')
+        .eq('id', userId)
+        .maybeSingle();
 
-    List<Map<String,Object?>> res = await db.query(
-      'users',
-      columns: ['friends'],
-      where: 'id = ?',
-      whereArgs: [userId],
-    );
+    String currFriends = res?['friends'] as String? ?? '';
+    String newFriends = currFriends
+        .replaceAll(RegExp(r'(^|,)' + RegExp.escape(friendName) + r'(?=,|$)'), '')
+        .replaceAll(RegExp(r'^,|,$'), '');
 
-    String newFriends = (res.first["friends"] as String).replaceAll(RegExp(r'(^|,)' + RegExp.escape(friendName) + r'(?=,|$)'), '').replaceAll(RegExp(r'^,|,$'), '');
-    await db.update(
-      'users',
-      {'friends': newFriends},
-      where: 'id=?',
-      whereArgs: [userId]
-    );
+    await _client
+        .from('users')
+        .update({'friends': newFriends})
+        .eq('id', userId);
   }
-  
+
+  // Check if username exists
   Future<bool> checkExistence(String username) async {
-    Database db = await database;
-
     username = username.trim();
-
-    List<Map<String,Object?>> res = await db.query(
-      'users',
-      columns: ['id'],
-      where: 'username = ?',
-      whereArgs: [username],
-    );
-    return res.isNotEmpty;
+    final res = await _client
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle();
+    return res != null;
   }
 
-  Future<void> insertUserIfNotExists({required String username,required String email}) async {
-    final db = await database;
-    final existing = await db.query(
-      'users',
-      where: 'username = ?',
-      whereArgs: [username],
-    );
-    if (existing.isEmpty) {
+  // Insert user if not exists (for OAuth-like flows)
+  Future<void> insertUserIfNotExists({required String username, required String email}) async {
+    final existing = await _client
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .maybeSingle();
+
+    if (existing == null) {
       final randomPass = generateRandomPassword(16);
-      await db.insert('users', {
+      await _client.from('users').insert({
         'username': username,
-        'email': email,   
+        'email': email,
         'password': randomPass,
       });
     }
@@ -613,18 +865,21 @@ class DbHelper {
         '0123456789'
         '!@#\$%^&*()-_=+[]{}|;:,.<>?';
     final rand = Random.secure();
-    return List.generate(length, (_) => chars[rand.nextInt(chars.length)])
-        .join();
+    return List.generate(length, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
+  // Insert questions if missing (for seeding)
   Future<void> insertQuestionsIfMissing(String category, List<Map<String, dynamic>> problems) async {
-    final db = await database;
-    final existing = await db.query('questions', where: 'category = ?', whereArgs: [category]);
+    final existing = await _client
+        .from('questions')
+        .select('id')
+        .eq('category', category)
+        .limit(1);
+
     if (existing.isEmpty) {
       for (var problem in problems) {
-        await db.insert('questions', problem);
+        await _client.from('questions').insert(problem);
       }
     }
   }
-
 }

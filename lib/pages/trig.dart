@@ -1,26 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:math_derust/data/db.dart';
 import 'package:math_derust/widgets/question.dart';
+import 'package:math_derust/theme/app_theme.dart';
 import '../problems/trig_problems.dart';
-
-/*
-TOPICS
-1. Use trigonometric ratios and the Pythagorean Theorem to solve right triangles and right triangle applications.
-2. State from memory the trigonometric functions of special angles in radians and degrees.
-3. State from memory the fundamental trigonometric identities.
-4. Evaluate trigonometric expressions involving any angle.
-5. Solve applications using the Laws of Sines and Cosines.
-6. Evaluate trigonometric functions of real numbers.
-7. Analyze and graph trigonometric functions, identifying domains, ranges, amplitudes, periods, phase shifts and asymptotes.
-8. Simplify trigonometric expressions and prove trigonometric identities.
-9. Evaluate expressions involving inverse trigonometric functions.
-10. Solve trigonometric equations for exact and approximate values.
-11. Identify and graph common polar equations.
-12. Identify and graph common parametrically defined curves.
-13. Perform vector addition, subtraction and scalar multiplication in geometric, algebraic and trigonometric forms.
-14. Use vector properties to solve applied problems algebraically and trigonometrically.
-15. Find vector and scalar projections using the dot product.
-*/
 
 class TrigPage extends StatefulWidget {
   const TrigPage({super.key});
@@ -29,23 +11,48 @@ class TrigPage extends StatefulWidget {
   State<TrigPage> createState() => _TrigPageState();
 }
 
-class _TrigPageState extends State<TrigPage> {
+class _TrigPageState extends State<TrigPage> with SingleTickerProviderStateMixin {
   DbHelper db = DbHelper.instance;
-  List<Map<String,dynamic>> questions = [];
+  List<Map<String, dynamic>> questions = [];
+  List<Map<String, dynamic>> newProblems = trigProblems;
+  bool _isLoading = true;
+  
+  late AnimationController _animController;
+  late Animation<double> _fadeAnimation;
 
-  List<Map<String,dynamic>> newProblems = trigProblems;
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOut,
+    );
+    _animController.forward();
+    _initializeProblems();
+  }
 
-  Future<void> _addProblems(List<Map<String,dynamic>> newProblems) async {
-    for (Map<String,dynamic> newProblem in newProblems) {
-      await db.insert('questions',newProblem);
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addProblems(List<Map<String, dynamic>> newProblems) async {
+    for (Map<String, dynamic> newProblem in newProblems) {
+      await db.insert('questions', newProblem);
     }
   }
 
   Future<void> _loadProblems() async {
-    List<Map<String,dynamic>> questions = await db.queryWhere('questions','category=?',['Trigonometry']);
+    List<Map<String, dynamic>> questions = await db.queryWhere('questions', 'category', 'Trigonometry');
     if (!mounted) return;
     setState(() {
       this.questions = questions;
+      _isLoading = false;
     });
   }
 
@@ -55,31 +62,146 @@ class _TrigPageState extends State<TrigPage> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _initializeProblems();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.backgroundDark,
+      body: Stack(
+        children: [
+          const AnimatedBackground(
+            primaryColor: AppColors.trigColor,
+            secondaryColor: Color(0xFF8B3A3A),
+          ),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Column(
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.backgroundCard,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.grey.shade800.withOpacity(0.3),
+                            ),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: AppColors.trigColor,
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'TRIGONOMETRY',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w300,
+                                  color: AppColors.trigColor,
+                                  letterSpacing: 4,
+                                ),
+                              ),
+                              Text(
+                                '${questions.length} problems',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.trigColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.circle_outlined,
+                            color: AppColors.trigColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Questions list
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.trigColor,
+                            ),
+                          )
+                        : questions.isEmpty
+                            ? _buildEmptyState()
+                            : ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.only(top: 8, bottom: 100),
+                                itemCount: questions.length,
+                                itemBuilder: (context, index) {
+                                  return QuestionWidget(
+                                    topic: 'Trigonometry',
+                                    name: questions[index]['name'],
+                                    difficulty: questions[index]['difficulty'],
+                                    content: questions[index]['content'],
+                                    answers: questions[index]['answers'],
+                                    db: db,
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.builder(
-            itemCount: questions.length,
-            itemBuilder: (context,index) {
-              return QuestionWidget(
-                topic: 'Trigonometry',
-                name: questions[index]['name'], 
-                difficulty: questions[index]['difficulty'], 
-                content: questions[index]['content'], 
-                answers: questions[index]['answers'],
-                db: db
-              );
-            },
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.trigColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(
+              Icons.circle_outlined,
+              size: 40,
+              color: AppColors.trigColor,
+            ),
           ),
-        )
-      ],
+          const SizedBox(height: 20),
+          Text(
+            'No problems yet',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
