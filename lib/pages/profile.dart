@@ -439,8 +439,9 @@ class ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
                     painter: PieChartPainter(
                       xpAlgebra: xps['xp_algebra'] ?? 0,
                       xpGeometry: xps['xp_geometry'] ?? 0,
-                      xpIntAlg: xps['xp_intalg'] ?? 0,
                       xpTrig: xps['xp_trig'] ?? 0,
+                      xpCalculus: xps['xp_calculus'] ?? 0,
+                      xpCombinatorics: xps['xp_combinatorics'] ?? 0,
                     ),
                   ),
                   Container(
@@ -491,8 +492,9 @@ class ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
             children: [
               _buildLegendItem('Algebra', AppColors.algebraColor, xps['xp_algebra'] ?? 0),
               _buildLegendItem('Geometry', AppColors.geometryColor, xps['xp_geometry'] ?? 0),
-              _buildLegendItem('Int. Algebra', AppColors.intAlgColor, xps['xp_intalg'] ?? 0),
               _buildLegendItem('Trigonometry', AppColors.trigColor, xps['xp_trig'] ?? 0),
+              _buildLegendItem('Calculus', AppColors.calculusColor, xps['xp_calculus'] ?? 0),
+              _buildLegendItem('Combinatorics', AppColors.combinatoricsColor, xps['xp_combinatorics'] ?? 0),
             ],
           ),
         ],
@@ -528,14 +530,16 @@ class ProfileState extends State<Profile> with SingleTickerProviderStateMixin {
 class PieChartPainter extends CustomPainter {
   final int xpAlgebra;
   final int xpGeometry;
-  final int xpIntAlg;
   final int xpTrig;
+  final int xpCalculus;
+  final int xpCombinatorics;
 
   PieChartPainter({
     required this.xpAlgebra,
     required this.xpGeometry,
-    required this.xpIntAlg,
     required this.xpTrig,
+    required this.xpCalculus,
+    required this.xpCombinatorics,
   });
 
   @override
@@ -546,11 +550,12 @@ class PieChartPainter extends CustomPainter {
     List<Color> colors = [
       AppColors.algebraColor,
       AppColors.geometryColor,
-      AppColors.intAlgColor,
       AppColors.trigColor,
+      AppColors.calculusColor,
+      AppColors.combinatoricsColor,
     ];
 
-    List<int> xpValues = [xpAlgebra, xpGeometry, xpIntAlg, xpTrig];
+    List<int> xpValues = [xpAlgebra, xpGeometry, xpTrig, xpCalculus, xpCombinatorics];
     int totalXp = xpValues.reduce((a, b) => a + b);
 
     if (totalXp == 0) {

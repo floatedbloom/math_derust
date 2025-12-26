@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:math_derust/theme/app_theme.dart';
 import 'algebra.dart';
+import 'calculus.dart';
+import 'combinatorics.dart';
 import 'geometry.dart';
-import 'int_alg.dart';
 import 'trig.dart';
 
 class Learn extends StatefulWidget {
@@ -88,23 +89,34 @@ class LearnState extends State<Learn> with SingleTickerProviderStateMixin {
                 const SizedBox(height: 16),
                 
                 _buildTopicCard(
-                  name: 'Intermediate Algebra',
-                  description: 'Advanced equations and graphing',
-                  icon: Icons.show_chart_rounded,
-                  secondaryIcon: Icons.grid_on_rounded,
-                  color: AppColors.intAlgColor,
-                  onTap: () => _navigateTo(const IntAlgPage()),
-                ),
-                
-                const SizedBox(height: 16),
-                
-                _buildTopicCard(
                   name: 'Trigonometry',
                   description: 'Triangles, circles, and waves',
                   icon: Icons.circle_outlined,
                   secondaryIcon: Icons.square_foot_rounded,
                   color: AppColors.trigColor,
                   onTap: () => _navigateTo(const TrigPage()),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                _buildTopicCard(
+                  name: 'Combinatorics',
+                  description: 'Counting, permutations, and probability',
+                  icon: Icons.casino_rounded,
+                  secondaryIcon: Icons.pie_chart_rounded,
+                  color: AppColors.combinatoricsColor,
+                  onTap: () => _navigateTo(const CombinatoricsPage()),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                _buildTopicCard(
+                  name: 'Calculus',
+                  description: 'Limits, derivatives, integrals, and series',
+                  icon: Icons.integration_instructions_rounded,
+                  secondaryIcon: Icons.auto_graph_rounded,
+                  color: AppColors.calculusColor,
+                  onTap: () => _navigateTo(const CalculusPage()),
                 ),
                 
                 const SizedBox(height: 100),

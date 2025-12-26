@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:math_derust/data/db.dart';
-import 'package:math_derust/widgets/question.dart';
 import 'package:math_derust/theme/app_theme.dart';
+import 'package:math_derust/widgets/skill_tree_view.dart';
 import '../problems/geometry_problems.dart';
 
 class GeometryPage extends StatefulWidget {
@@ -14,7 +14,6 @@ class GeometryPage extends StatefulWidget {
 class _GeometryPageState extends State<GeometryPage> with SingleTickerProviderStateMixin {
   DbHelper db = DbHelper.instance;
   List<Map<String, dynamic>> questions = [];
-  List<Map<String, dynamic>> newProblems = geoProblems;
   bool _isLoading = true;
   
   late AnimationController _animController;
@@ -41,10 +40,8 @@ class _GeometryPageState extends State<GeometryPage> with SingleTickerProviderSt
     super.dispose();
   }
 
-  Future<void> _addProblems(List<Map<String, dynamic>> newProblems) async {
-    for (Map<String, dynamic> newProblem in newProblems) {
-      await db.insert('questions', newProblem);
-    }
+  Future<void> _initializeProblems() async {
+    await _loadProblems();
   }
 
   Future<void> _loadProblems() async {
@@ -54,11 +51,6 @@ class _GeometryPageState extends State<GeometryPage> with SingleTickerProviderSt
       this.questions = questions;
       _isLoading = false;
     });
-  }
-
-  void _initializeProblems() async {
-    await _addProblems(newProblems);
-    await _loadProblems();
   }
 
   @override
@@ -114,7 +106,7 @@ class _GeometryPageState extends State<GeometryPage> with SingleTickerProviderSt
                                 ),
                               ),
                               Text(
-                                '${questions.length} problems',
+                                '10 topics • ${questions.length} problems',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.grey.shade500,
@@ -139,7 +131,7 @@ class _GeometryPageState extends State<GeometryPage> with SingleTickerProviderSt
                     ),
                   ),
                   
-                  // Questions list
+                  // Skill tree
                   Expanded(
                     child: _isLoading
                         ? const Center(
@@ -147,57 +139,14 @@ class _GeometryPageState extends State<GeometryPage> with SingleTickerProviderSt
                               color: AppColors.geometryColor,
                             ),
                           )
-                        : questions.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                                physics: const BouncingScrollPhysics(),
-                                padding: const EdgeInsets.only(top: 8, bottom: 100),
-                                itemCount: questions.length,
-                                itemBuilder: (context, index) {
-                                  return QuestionWidget(
-                                    topic: 'Geometry',
-                                    name: questions[index]['name'],
-                                    difficulty: questions[index]['difficulty'],
-                                    content: questions[index]['content'],
-                                    answers: questions[index]['answers'],
-                                    db: db,
-                                  );
-                                },
-                              ),
+                        : SkillTreeView(
+                            subject: 'Geometry',
+                            subjectColor: AppColors.geometryColor,
+                            allQuestions: questions,
+                          ),
                   ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.geometryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(
-              Icons.change_history_rounded,
-              size: 40,
-              color: AppColors.geometryColor,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'No problems yet',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade500,
             ),
           ),
         ],

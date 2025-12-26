@@ -359,16 +359,48 @@ class DbHelper {
         }
         break;
         
-      case 'intalg_lesson':
-        final intalgQuests = await _client
+      case 'combinatorics_lesson':
+        final combQuests = await _client
             .from('user_quests')
             .select('quest_id, quests!inner(id, name)')
             .eq('user_id', userId)
             .eq('assigned_date', today);
-        for (var uq in intalgQuests) {
+        for (var uq in combQuests) {
           final questName = (uq['quests'] as Map)['name'] as String;
-          if (questName.toLowerCase().contains('int.') || 
-              questName.toLowerCase().contains('intermediate')) {
+          if (questName.toLowerCase().contains('combinatorics') || 
+              questName.toLowerCase().contains('probability') ||
+              questName.toLowerCase().contains('counting')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'calculus_lesson':
+        final calcQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in calcQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('calculus') || 
+              questName.toLowerCase().contains('calc')) {
+            questIdsToUpdate.add(uq['quest_id'] as int);
+          }
+        }
+        break;
+        
+      case 'challenge_complete':
+        final challengeQuests = await _client
+            .from('user_quests')
+            .select('quest_id, quests!inner(id, name)')
+            .eq('user_id', userId)
+            .eq('assigned_date', today);
+        for (var uq in challengeQuests) {
+          final questName = (uq['quests'] as Map)['name'] as String;
+          if (questName.toLowerCase().contains('challenge') || 
+              questName.toLowerCase().contains('challenger') ||
+              questName.toLowerCase().contains('conquer')) {
             questIdsToUpdate.add(uq['quest_id'] as int);
           }
         }
@@ -625,7 +657,7 @@ class DbHelper {
   Future<void> broDidntMessUp(int questionId, String questionType, int userId) async {
     final userData = await _client
         .from('users')
-        .select('xp_algebra, xp_geometry, xp_intalg, xp_trig')
+        .select('xp_algebra, xp_geometry, xp_trig, xp_calculus, xp_combinatorics')
         .eq('id', userId)
         .maybeSingle();
 
@@ -639,10 +671,14 @@ class DbHelper {
     } else if (questionType == "Geometry") {
       int currentXp = userData['xp_geometry'] as int? ?? 0;
       updateData['xp_geometry'] = currentXp + 10;
-    } else if (questionType == "Intermediate Algebra") {
-      int currentXp = userData['xp_intalg'] as int? ?? 0;
-      updateData['xp_intalg'] = currentXp + 10;
+    } else if (questionType == "Calculus") {
+      int currentXp = userData['xp_calculus'] as int? ?? 0;
+      updateData['xp_calculus'] = currentXp + 10;
+    } else if (questionType == "Combinatorics") {
+      int currentXp = userData['xp_combinatorics'] as int? ?? 0;
+      updateData['xp_combinatorics'] = currentXp + 10;
     } else {
+      // Trigonometry (default)
       int currentXp = userData['xp_trig'] as int? ?? 0;
       updateData['xp_trig'] = currentXp + 10;
     }
@@ -654,7 +690,7 @@ class DbHelper {
   Future<Map<String, int>> getUserXp(int userId) async {
     final result = await _client
         .from('users')
-        .select('xp_tot, xp_algebra, xp_geometry, xp_intalg, xp_trig')
+        .select('xp_tot, xp_algebra, xp_geometry, xp_trig, xp_calculus, xp_combinatorics')
         .eq('id', userId)
         .maybeSingle();
 
@@ -663,8 +699,9 @@ class DbHelper {
         'xp_tot': result['xp_tot'] as int? ?? 0,
         'xp_algebra': result['xp_algebra'] as int? ?? 0,
         'xp_geometry': result['xp_geometry'] as int? ?? 0,
-        'xp_intalg': result['xp_intalg'] as int? ?? 0,
         'xp_trig': result['xp_trig'] as int? ?? 0,
+        'xp_calculus': result['xp_calculus'] as int? ?? 0,
+        'xp_combinatorics': result['xp_combinatorics'] as int? ?? 0,
       };
     }
 
@@ -672,8 +709,9 @@ class DbHelper {
       'xp_tot': 0,
       'xp_algebra': 0,
       'xp_geometry': 0,
-      'xp_intalg': 0,
       'xp_trig': 0,
+      'xp_calculus': 0,
+      'xp_combinatorics': 0,
     };
   }
 
@@ -881,5 +919,161 @@ class DbHelper {
         await _client.from('questions').insert(problem);
       }
     }
+  }
+
+  // ============ TOPIC PROGRESS ============
+
+  // Check if a topic is completed
+  Future<bool> isTopicCompleted(int userId, String category, int topicId) async {
+    final result = await _client
+        .from('topic_progress')
+        .select('completed')
+        .eq('user_id', userId)
+        .eq('category', category)
+        .eq('topic_id', topicId)
+        .maybeSingle();
+    
+    return result?['completed'] == true;
+  }
+
+  // Get all completed topics for a user and category
+  Future<Set<int>> getCompletedTopics(int userId, String category) async {
+    final result = await _client
+        .from('topic_progress')
+        .select('topic_id')
+        .eq('user_id', userId)
+        .eq('category', category)
+        .eq('completed', true);
+    
+    return result.map<int>((r) => r['topic_id'] as int).toSet();
+  }
+
+  // Mark a topic as completed
+  Future<void> markTopicCompleted(int userId, String category, int topicId) async {
+    // Upsert - insert or update if exists
+    await _client.from('topic_progress').upsert({
+      'user_id': userId,
+      'category': category,
+      'topic_id': topicId,
+      'completed': true,
+      'completed_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'user_id,category,topic_id');
+  }
+
+  // Add a question to mistakes (used when redoing incorrect questions)
+  Future<void> addMistake(int userId, int questionId) async {
+    // Check if mistake already exists
+    final mistakeExists = await _client
+        .from('mistakes')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('question_id', questionId)
+        .maybeSingle();
+
+    if (mistakeExists == null) {
+      await _client.from('mistakes').insert({
+        'user_id': userId,
+        'question_id': questionId,
+      });
+    }
+  }
+
+  // Get question ID by name and category
+  Future<int?> getQuestionId(String name, String category) async {
+    final result = await _client
+        .from('questions')
+        .select('id')
+        .eq('name', name)
+        .eq('category', category)
+        .maybeSingle();
+    
+    return result?['id'] as int?;
+  }
+
+  // ============ CHALLENGE PROGRESS ============
+
+  // Get challenge progress for a user and category
+  Future<Map<String, dynamic>> getChallengeProgress(int userId, String category) async {
+    final result = await _client
+        .from('challenge_progress')
+        .select('topic_id, completed, best_score')
+        .eq('user_id', userId)
+        .eq('category', category);
+    
+    Set<int> completed = {};
+    Map<int, int> bestScores = {};
+    
+    for (var r in result) {
+      final topicId = r['topic_id'] as int;
+      if (r['completed'] == true) {
+        completed.add(topicId);
+      }
+      if (r['best_score'] != null) {
+        bestScores[topicId] = r['best_score'] as int;
+      }
+    }
+    
+    return {
+      'completed': completed,
+      'bestScores': bestScores,
+    };
+  }
+
+  // Update challenge progress after completing a challenge
+  Future<void> updateChallengeProgress(int userId, String category, int topicId, int score, int totalQuestions) async {
+    final percentage = ((score / totalQuestions) * 100).round();
+    
+    // Get existing progress
+    final existing = await _client
+        .from('challenge_progress')
+        .select('best_score, attempts')
+        .eq('user_id', userId)
+        .eq('category', category)
+        .eq('topic_id', topicId)
+        .maybeSingle();
+    
+    int currentBest = existing?['best_score'] as int? ?? 0;
+    int attempts = (existing?['attempts'] as int? ?? 0) + 1;
+    bool isNewBest = percentage > currentBest;
+    bool completed = percentage >= 70; // 70% to complete a challenge
+    
+    await _client.from('challenge_progress').upsert({
+      'user_id': userId,
+      'category': category,
+      'topic_id': topicId,
+      'completed': completed,
+      'best_score': isNewBest ? percentage : currentBest,
+      'attempts': attempts,
+      'completed_at': completed ? DateTime.now().toUtc().toIso8601String() : null,
+    }, onConflict: 'user_id,category,topic_id');
+    
+    // Update quest progress for challenge completion
+    if (completed) {
+      await updateQuestsByCondition(userId, 'challenge_complete');
+    }
+  }
+
+  // Check if a challenge is completed
+  Future<bool> isChallengeCompleted(int userId, String category, int topicId) async {
+    final result = await _client
+        .from('challenge_progress')
+        .select('completed')
+        .eq('user_id', userId)
+        .eq('category', category)
+        .eq('topic_id', topicId)
+        .maybeSingle();
+    
+    return result?['completed'] == true;
+  }
+
+  // Get total completed challenges count for a user
+  Future<int> getTotalChallengesCompleted(int userId) async {
+    final result = await _client
+        .from('challenge_progress')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('completed', true);
+    
+    return (result as List).length;
   }
 }

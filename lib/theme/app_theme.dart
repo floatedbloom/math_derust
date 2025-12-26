@@ -26,8 +26,9 @@ class AppColors {
   // Subject colors (matching existing)
   static const Color algebraColor = Color(0xFFB0BEC5);
   static const Color geometryColor = Color(0xFF689E6A);
-  static const Color intAlgColor = Color(0xFFC58342);
   static const Color trigColor = Color(0xFFCC5D5D);
+  static const Color calculusColor = Color(0xFF9B7ED9);  // Purple for calculus
+  static const Color combinatoricsColor = Color(0xFF4ECDC4);  // Teal for combinatorics
   
   // Status colors
   static const Color success = Color(0xFF4CAF50);

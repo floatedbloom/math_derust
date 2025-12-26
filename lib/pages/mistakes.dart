@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:math_derust/data/db.dart';
 import 'package:math_derust/session.dart';
 import 'package:math_derust/theme/app_theme.dart';
-import 'package:rive/rive.dart' hide LinearGradient;
+import 'package:math_derust/widgets/mistake_lesson.dart';
 
 class Mistakes extends StatefulWidget {
   const Mistakes({super.key});
@@ -13,10 +13,40 @@ class Mistakes extends StatefulWidget {
 
 class MistakesState extends State<Mistakes> with SingleTickerProviderStateMixin {
   DbHelper db = DbHelper.instance;
-  List<Map<String, dynamic>> mistakes = [];
+  Map<String, List<Map<String, dynamic>>> mistakesByCategory = {};
+  bool _isLoading = true;
   
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
+
+  // Category definitions
+  final List<Map<String, dynamic>> categories = [
+    {
+      'name': 'Algebra',
+      'icon': Icons.functions_rounded,
+      'color': AppColors.algebraColor,
+    },
+    {
+      'name': 'Geometry',
+      'icon': Icons.change_history_rounded,
+      'color': AppColors.geometryColor,
+    },
+    {
+      'name': 'Trigonometry',
+      'icon': Icons.circle_outlined,
+      'color': AppColors.trigColor,
+    },
+    {
+      'name': 'Calculus',
+      'icon': Icons.integration_instructions_rounded,
+      'color': AppColors.calculusColor,
+    },
+    {
+      'name': 'Combinatorics',
+      'icon': Icons.casino_rounded,
+      'color': AppColors.combinatoricsColor,
+    },
+  ];
 
   @override
   void initState() {
@@ -40,219 +70,57 @@ class MistakesState extends State<Mistakes> with SingleTickerProviderStateMixin 
   }
 
   Future<void> _loadMistakes() async {
-    List<Map<String, dynamic>> fetchedMistakes =
-        await db.queryUserMistakes(Session.instance.currentUserId ?? 0);
+    final allMistakes = await db.queryUserMistakes(Session.instance.currentUserId ?? 0);
+    
+    // Group by category
+    Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (var category in categories) {
+      grouped[category['name']] = [];
+    }
+    
+    for (var mistake in allMistakes) {
+      final category = mistake['category'] ?? 'Algebra';
+      if (grouped.containsKey(category)) {
+        grouped[category]!.add(mistake);
+      }
+    }
+    
     if (mounted) {
       setState(() {
-        mistakes = fetchedMistakes;
+        mistakesByCategory = grouped;
+        _isLoading = false;
       });
     }
   }
 
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'algebra':
-        return AppColors.algebraColor;
-      case 'geometry':
-        return AppColors.geometryColor;
-      case 'intermediate algebra':
-        return AppColors.intAlgColor;
-      case 'trigonometry':
-        return AppColors.trigColor;
-      default:
-        return AppColors.goldMuted;
+  int get totalMistakes {
+    int total = 0;
+    for (var list in mistakesByCategory.values) {
+      total += list.length;
     }
+    return total;
   }
 
-  void _showQuestion(String name, String content, List<String> answers, String category) {
-    final color = _getCategoryColor(category);
+  void _startReview(String categoryName, List<Map<String, dynamic>> mistakes, Color color) async {
+    if (mistakes.isEmpty) {
+      showStyledSnackBar(context, 'No mistakes in this category!', isError: true);
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MistakeLessonWidget(
+          category: categoryName,
+          mistakes: mistakes,
+          color: color,
+          db: db,
+        ),
+      ),
+    );
     
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        decoration: const BoxDecoration(
-          color: AppColors.backgroundCard,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade700,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Category badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: color.withOpacity(0.3)),
-                      ),
-                      child: Text(
-                        category,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Question title
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Question content
-                    Text(
-                      content,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade300,
-                        height: 1.5,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 32),
-                    
-                    Text(
-                      'SELECT YOUR ANSWER',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Answer buttons
-                    ...answers.map((answer) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildAnswerButton(answer, name, category, color),
-                    )),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnswerButton(String answer, String questionName, String category, Color color) {
-    return GestureDetector(
-      onTap: () async {
-        int questionId = await db.getQuestionIdByNameAndCategory(questionName, category) ?? 0;
-        bool isCorrect = await db.checkAnswer(questionName, answer, category);
-        
-        if (isCorrect) {
-          final userId = Session.instance.currentUserId ?? 0;
-          await db.removeMistake(userId, questionId);
-          
-          // Update quest progress for fixing mistakes
-          await db.updateQuestsByCondition(userId, 'mistake_fixed');
-          await _loadMistakes();
-        }
-        
-        Navigator.pop(context);
-        await _showResultAnimation(isCorrect);
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundDark,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: color.withOpacity(0.2),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: color.withOpacity(0.5), width: 2),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                answer,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showResultAnimation(bool isCorrect) async {
-    late BuildContext dialogContext;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black87,
-      builder: (BuildContext ctx) {
-        dialogContext = ctx;
-        return Center(
-          child: Container(
-            width: 200,
-            height: 200,
-            decoration: BoxDecoration(
-              color: AppColors.backgroundCard,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: RiveAnimation.asset(
-              isCorrect ? 'assets/checkmark_icon.riv' : 'assets/error_icon.riv',
-            ),
-          ),
-        );
-      },
-    );
-
-    await Future.delayed(const Duration(milliseconds: 1500));
-
-    if (Navigator.canPop(dialogContext)) {
-      Navigator.pop(dialogContext);
-    }
+    // Reload mistakes after returning
+    _loadMistakes();
   }
 
   @override
@@ -261,48 +129,296 @@ class MistakesState extends State<Mistakes> with SingleTickerProviderStateMixin 
       backgroundColor: Colors.transparent,
       body: FadeTransition(
         opacity: _fadeAnimation,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              
-              const GradientTitle(text: 'MISTAKES', fontSize: 24),
-              
-              const SizedBox(height: 16),
-              
-              Text(
-                'Review and fix your errors',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  letterSpacing: 0.5,
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.gold),
+              )
+            : totalMistakes == 0
+                ? _buildEmptyState()
+                : _buildContent(),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          
+          const GradientTitle(text: 'MISTAKES', fontSize: 24),
+          
+          const SizedBox(height: 8),
+          
+          Text(
+            'Review and master your weak spots',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+              letterSpacing: 0.5,
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Summary card
+          _buildSummaryCard(),
+          
+          const SizedBox(height: 32),
+          
+          Text(
+            'BY CATEGORY',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade500,
+              letterSpacing: 2,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Category cards
+          ...categories.asMap().entries.map((entry) {
+            final index = entry.key;
+            final category = entry.value;
+            final categoryMistakes = mistakesByCategory[category['name']] ?? [];
+            
+            return TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: Duration(milliseconds: 400 + (index * 100)),
+              curve: Curves.easeOut,
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - value)),
+                    child: child,
+                  ),
+                );
+              },
+              child: _buildCategoryCard(
+                category['name'],
+                category['icon'],
+                category['color'],
+                categoryMistakes,
+              ),
+            );
+          }),
+          
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.error.withOpacity(0.15),
+            AppColors.error.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.error.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppColors.error.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.error,
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$totalMistakes mistake${totalMistakes == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'to review across all categories',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (totalMistakes > 0)
+            GestureDetector(
+              onTap: _startAllReview,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: AppGradients.goldGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'FIX ALL',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.backgroundDark,
+                  ),
                 ),
               ),
-              
-              const SizedBox(height: 30),
-              
-              Expanded(
-                child: mistakes.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: mistakes.length,
-                        itemBuilder: (context, index) {
-                          final mistake = mistakes[index];
-                          return _buildMistakeCard(
-                            mistake['name'] ?? '',
-                            mistake['category'] ?? '',
-                            mistake['difficulty'] ?? 0,
-                            mistake['content'] ?? '',
-                            mistake['answers'] ?? '',
-                            index,
-                          );
-                        },
-                      ),
-              ),
-            ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _startAllReview() {
+    List<Map<String, dynamic>> allMistakes = [];
+    for (var list in mistakesByCategory.values) {
+      allMistakes.addAll(list);
+    }
+    
+    if (allMistakes.isEmpty) return;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MistakeLessonWidget(
+          category: 'All Categories',
+          mistakes: allMistakes,
+          color: AppColors.gold,
+          db: db,
+        ),
+      ),
+    ).then((_) => _loadMistakes());
+  }
+
+  Widget _buildCategoryCard(
+    String name,
+    IconData icon,
+    Color color,
+    List<Map<String, dynamic>> mistakes,
+  ) {
+    final count = mistakes.length;
+    final isEmpty = count == 0;
+    
+    return GestureDetector(
+      onTap: isEmpty ? null : () => _startReview(name, mistakes, color),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.backgroundCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isEmpty 
+                ? Colors.grey.shade800.withOpacity(0.3)
+                : color.withOpacity(0.3),
           ),
+        ),
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: isEmpty
+                    ? Colors.grey.shade800.withOpacity(0.3)
+                    : color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                icon,
+                color: isEmpty ? Colors.grey.shade600 : color,
+                size: 24,
+              ),
+            ),
+            
+            const SizedBox(width: 14),
+            
+            // Name and count
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: isEmpty ? Colors.grey.shade500 : Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isEmpty
+                        ? 'No mistakes - Great job!'
+                        : '$count mistake${count == 1 ? '' : 's'} to review',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isEmpty 
+                          ? AppColors.success.withOpacity(0.7)
+                          : Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Action
+            if (!isEmpty)
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  color: color,
+                  size: 22,
+                ),
+              )
+            else
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: AppColors.success,
+                  size: 22,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -352,130 +468,6 @@ class MistakesState extends State<Mistakes> with SingleTickerProviderStateMixin 
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMistakeCard(
-    String name,
-    String category,
-    int difficulty,
-    String content,
-    String answers,
-    int index,
-  ) {
-    List<String> answersSplit = answers.split(';');
-    final color = _getCategoryColor(category);
-    
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 400 + (index * 100)),
-      curve: Curves.easeOut,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: GestureDetector(
-        onTap: () => _showQuestion(name, content, answersSplit, category),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.backgroundCard,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: color.withOpacity(0.2),
-            ),
-          ),
-          child: Row(
-            children: [
-              // Category indicator
-              Container(
-                width: 4,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              
-              const SizedBox(width: 16),
-              
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            category,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: color,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Row(
-                          children: List.generate(
-                            3,
-                            (i) => Icon(
-                              Icons.star_rounded,
-                              size: 14,
-                              color: i < difficulty
-                                  ? AppColors.gold
-                                  : Colors.grey.shade700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Retry icon
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.replay_rounded,
-                  color: color,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

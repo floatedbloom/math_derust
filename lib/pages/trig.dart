@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:math_derust/data/db.dart';
-import 'package:math_derust/widgets/question.dart';
 import 'package:math_derust/theme/app_theme.dart';
+import 'package:math_derust/widgets/skill_tree_view.dart';
 import '../problems/trig_problems.dart';
+
 
 class TrigPage extends StatefulWidget {
   const TrigPage({super.key});
@@ -14,7 +15,6 @@ class TrigPage extends StatefulWidget {
 class _TrigPageState extends State<TrigPage> with SingleTickerProviderStateMixin {
   DbHelper db = DbHelper.instance;
   List<Map<String, dynamic>> questions = [];
-  List<Map<String, dynamic>> newProblems = trigProblems;
   bool _isLoading = true;
   
   late AnimationController _animController;
@@ -38,13 +38,11 @@ class _TrigPageState extends State<TrigPage> with SingleTickerProviderStateMixin
   @override
   void dispose() {
     _animController.dispose();
-    super.dispose();
+    super.dispose(); 
   }
 
-  Future<void> _addProblems(List<Map<String, dynamic>> newProblems) async {
-    for (Map<String, dynamic> newProblem in newProblems) {
-      await db.insert('questions', newProblem);
-    }
+  Future<void> _initializeProblems() async {
+    await _loadProblems();
   }
 
   Future<void> _loadProblems() async {
@@ -54,11 +52,6 @@ class _TrigPageState extends State<TrigPage> with SingleTickerProviderStateMixin
       this.questions = questions;
       _isLoading = false;
     });
-  }
-
-  void _initializeProblems() async {
-    await _addProblems(newProblems);
-    await _loadProblems();
   }
 
   @override
@@ -114,7 +107,7 @@ class _TrigPageState extends State<TrigPage> with SingleTickerProviderStateMixin
                                 ),
                               ),
                               Text(
-                                '${questions.length} problems',
+                                '10 topics • ${questions.length} problems',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.grey.shade500,
@@ -139,7 +132,7 @@ class _TrigPageState extends State<TrigPage> with SingleTickerProviderStateMixin
                     ),
                   ),
                   
-                  // Questions list
+                  // Skill tree
                   Expanded(
                     child: _isLoading
                         ? const Center(
@@ -147,57 +140,14 @@ class _TrigPageState extends State<TrigPage> with SingleTickerProviderStateMixin
                               color: AppColors.trigColor,
                             ),
                           )
-                        : questions.isEmpty
-                            ? _buildEmptyState()
-                            : ListView.builder(
-                                physics: const BouncingScrollPhysics(),
-                                padding: const EdgeInsets.only(top: 8, bottom: 100),
-                                itemCount: questions.length,
-                                itemBuilder: (context, index) {
-                                  return QuestionWidget(
-                                    topic: 'Trigonometry',
-                                    name: questions[index]['name'],
-                                    difficulty: questions[index]['difficulty'],
-                                    content: questions[index]['content'],
-                                    answers: questions[index]['answers'],
-                                    db: db,
-                                  );
-                                },
-                              ),
+                        : SkillTreeView(
+                            subject: 'Trigonometry',
+                            subjectColor: AppColors.trigColor,
+                            allQuestions: questions,
+                          ),
                   ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.trigColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(
-              Icons.circle_outlined,
-              size: 40,
-              color: AppColors.trigColor,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'No problems yet',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade500,
             ),
           ),
         ],

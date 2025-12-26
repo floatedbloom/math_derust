@@ -3,6 +3,7 @@ import 'package:math_derust/data/db.dart';
 import 'package:math_derust/session.dart';
 import 'package:math_derust/theme/app_theme.dart';
 import 'package:rive/rive.dart' hide LinearGradient;
+import 'package:flutter_math_fork/flutter_math.dart';
 
 class QuestionWidget extends StatelessWidget {
   final String topic;
@@ -28,13 +29,63 @@ class QuestionWidget extends StatelessWidget {
         return AppColors.algebraColor;
       case 'geometry':
         return AppColors.geometryColor;
-      case 'intermediate algebra':
-        return AppColors.intAlgColor;
       case 'trigonometry':
         return AppColors.trigColor;
+      case 'calculus':
+        return AppColors.calculusColor;
+      case 'combinatorics':
+        return AppColors.combinatoricsColor;
       default:
         return AppColors.goldMuted;
     }
+  }
+
+  /// Parses a string with LaTeX delimiters and returns InlineSpan list.
+  /// Supports \(...\) for inline math.
+  List<InlineSpan> _parseLatexInline(String input, TextStyle textStyle) {
+    // Debug: print the input to see actual escape sequences
+    print('LaTeX input: $input');
+    print('Input codeunits: ${input.codeUnits}');
+    
+    // Try matching \(...\) - handles both escaped and unescaped backslashes
+    final regex = RegExp(r'\\+\((.*?)\\+\)');
+    final spans = <InlineSpan>[];
+
+    int currentIndex = 0;
+
+    for (final match in regex.allMatches(input)) {
+      if (match.start > currentIndex) {
+        spans.add(
+          TextSpan(
+            text: input.substring(currentIndex, match.start),
+            style: textStyle,
+          ),
+        );
+      }
+
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Math.tex(
+            match.group(1)!.trim(),
+            textStyle: textStyle,
+          ),
+        ),
+      );
+
+      currentIndex = match.end;
+    }
+
+    if (currentIndex < input.length) {
+      spans.add(
+        TextSpan(
+          text: input.substring(currentIndex),
+          style: textStyle,
+        ),
+      );
+    }
+
+    return spans;
   }
 
   void _showQuestion(BuildContext context, String topic, String name, String content, List<String> answers) {
@@ -121,7 +172,7 @@ class QuestionWidget extends StatelessWidget {
                     
                     const SizedBox(height: 20),
                     
-                    // Question content
+            // Question content
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -132,12 +183,15 @@ class QuestionWidget extends StatelessWidget {
                           color: color.withOpacity(0.2),
                         ),
                       ),
-                      child: Text(
-                        content,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey.shade300,
-                          height: 1.5,
+                      child: RichText(
+                        text: TextSpan(
+                          children: _parseLatexInline(
+                            content,
+                            TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade300,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -210,12 +264,16 @@ class QuestionWidget extends StatelessWidget {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                answer,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
+              child: RichText(
+                text: TextSpan(
+                  children: _parseLatexInline(
+                    answer,
+                    const TextStyle(
+                      fontSize: 15,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ),
             ),
