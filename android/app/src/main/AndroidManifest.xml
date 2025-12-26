@@ -1,8 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Permissions for image picker -->
+    <!-- CAMERA permission for taking photos -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- READ_EXTERNAL_STORAGE only needed for Android 12 and below -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <!-- Note: READ_MEDIA_IMAGES removed to comply with Google Play policy -->
+    <!-- Android 13+ uses the system photo picker which doesn't require this permission -->
     
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     
