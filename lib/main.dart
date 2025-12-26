@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Session;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:rive/rive.dart';
 
 import 'pages/home.dart';
 import 'pages/login.dart';
@@ -10,7 +11,7 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  await RiveNative.init();
   // Set system UI overlay style for immersive experience
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -35,7 +36,6 @@ void main() async {
     ),
     debug: false,
   );
-  
   // Restore session on app start
   await Session.instance.restoreSession();
   runApp(const MainApp());

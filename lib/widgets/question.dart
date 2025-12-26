@@ -300,7 +300,7 @@ class QuestionWidget extends StatelessWidget {
               color: AppColors.backgroundCard,
               borderRadius: BorderRadius.circular(24),
             ),
-            child: RiveAnimation.asset(
+            child: RiveWidget.asset(
               isCorrect ? 'assets/checkmark_icon.riv' : 'assets/error_icon.riv',
             ),
           ),

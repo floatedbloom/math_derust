@@ -222,6 +222,24 @@ class AppSession {
 
     await _loadUserData();
   }
+
+  // Delete account (removes database record and signs out)
+  // Note: Auth user deletion typically requires a server-side function or database trigger
+  Future<void> deleteAccount() async {
+    final dbUserId = currentUserId;
+    
+    if (dbUserId == null) return;
+
+    // Delete user record from database (this should cascade delete related records)
+    // A database trigger should handle auth user deletion
+    await _client
+        .from('users')
+        .delete()
+        .eq('id', dbUserId);
+
+    // Sign out the user
+    await signOut();
+  }
 }
 
 // Keep the old Session class name as an alias for backward compatibility
